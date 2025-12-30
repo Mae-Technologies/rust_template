@@ -46,7 +46,8 @@ jobs:
         run: |
           echo "::group::Changed Files"
           git fetch origin main
-          CHANGED=$(git diff --name-only origin/main...HEAD | grep '\.rs$' || true)
+          # Compare against the latest commit on main
+          CHANGED=$(git diff --name-only origin/main HEAD | grep '\.rs$' || true)
           echo "Changed Rust files:"
           echo "$CHANGED"
           echo "::endgroup::"
