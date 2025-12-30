@@ -69,6 +69,21 @@ jobs:
 
           echo "files=$CHANGED" >> $GITHUB_OUTPUT
 
+        # --- Optional debug output ---
+      - name: Debug environment and changed files
+        run: |
+          echo "::group::Debug Info"
+          echo "GITHUB_EVENT_NAME=${GITHUB_EVENT_NAME}"
+          echo "GITHUB_REF=${GITHUB_REF}"
+          echo "GITHUB_SHA=${GITHUB_SHA}"
+          echo "HEAD commit:"
+          git log -1 --oneline
+          echo "Main branch HEAD:"
+          git fetch origin main
+          git log origin/main -1 --oneline
+          echo "Changed Rust files: ${{ steps.changed_files.outputs.files }}"
+          echo "::endgroup::"
+
       # --- Optional debug output ---
       - name: Debug changed files
         run: |
