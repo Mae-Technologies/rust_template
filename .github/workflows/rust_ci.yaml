@@ -1,6 +1,10 @@
 name: Rust CI (Changed Files)
 
 on:
+  push:
+    branches:
+      - main
+      - master
   pull_request:
     branches:
       - main
