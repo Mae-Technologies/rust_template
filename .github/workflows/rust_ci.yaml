@@ -45,9 +45,8 @@ jobs:
         run: |
           echo "::group::Changed Files"
       
-          # Fetch full history to ensure diffs work
-          git fetch --prune --unshallow || true
-          git fetch origin main || true
+          # Fetch main branch
+          git fetch origin main
       
           # Detect base commit
           if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
@@ -57,7 +56,7 @@ jobs:
           fi
       
           # Get changed .rs files
-          CHANGED=$(git diff --name-only $BASE_SHA HEAD | grep '\.rs$' || true)
+          CHANGED=$(git diff --name-only "$BASE_SHA" HEAD | grep '\.rs$' || true)
       
           echo "Changed Rust files:"
           echo "$CHANGED"
