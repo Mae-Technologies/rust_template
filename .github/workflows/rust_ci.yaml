@@ -110,7 +110,7 @@ jobs:
       - name: Run Cargo Audit
         if: steps.changed_files.outputs.files != ''
         run: |
-          cargo install --version 0.19.2 cargo-audit
+          cargo install cargo-audit --force
           cargo +nightly audit
 
       # --- Run Cargo Deny ---
