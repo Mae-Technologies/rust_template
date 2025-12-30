@@ -1,0 +1,83 @@
+name: Rust CI (Changed Files)
+
+on:
+  pull_request:
+    branches:
+      - main
+      - master
+
+jobs:
+  nightly-ci:
+    name: Nightly Clippy + Miri + Audit + Deny + Fmt + Unsafe Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      # --- Cache Cargo dependencies ---
+      - name: Cache Cargo registry and git
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install Rust Nightly
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+          components: clippy,miri,rustfmt
+
+      - name: Install Cargo Miri
+        run: rustup component add miri
+
+      # --- Determine changed files ---
+      - name: Get changed Rust files
+        id: changed_files
+        run: |
+          echo "::group::Changed Files"
+          git fetch origin main
+          CHANGED=$(git diff --name-only origin/main...HEAD | grep '\.rs$' || true)
+          echo "Changed Rust files:"
+          echo "$CHANGED"
+          echo "::endgroup::"
+          echo "files=$CHANGED" >> $GITHUB_OUTPUT
+
+      # --- Run Rustfmt check ---
+      - name: Run rustfmt
+        if: steps.changed_files.outputs.files != ''
+        run: cargo +nightly fmt -- --check
+
+      # --- Run Clippy only if there are Rust changes ---
+      - name: Run Clippy (strict)
+        if: steps.changed_files.outputs.files != ''
+        run: |
+          cargo +nightly clippy \
+            --all-targets \
+            --all-features \
+            -- -D warnings \
+               -D clippy::undocumented_unsafe_blocks
+
+      # --- Run Miri tests only if there are Rust changes ---
+      - name: Run Miri Tests
+        if: steps.changed_files.outputs.files != ''
+        run: cargo +nightly miri test --all-targets --all-features -- --nocapture
+
+      # --- Run Cargo Audit ---
+      - name: Run Cargo Audit
+        if: steps.changed_files.outputs.files != ''
+        run: |
+          cargo install --version 0.19.2 cargo-audit
+          cargo +nightly audit
+
+      # --- Run Cargo Deny ---
+      - name: Run Cargo Deny
+        if: steps.changed_files.outputs.files != ''
+        run: |
+          cargo install cargo-deny
+          cargo +nightly deny check
