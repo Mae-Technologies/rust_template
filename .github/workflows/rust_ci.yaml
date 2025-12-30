@@ -20,7 +20,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0       # fetch full history to enable git diff
+          fetch-depth: 0       # full history needed for git diff
 
       # --- Cache Cargo dependencies ---
       - name: Cache Cargo registry and git
@@ -55,7 +55,7 @@ jobs:
           if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
             BASE_SHA=$(git merge-base HEAD origin/main)
           else
-            BASE_SHA="origin/main"
+            BASE_SHA=$(git merge-base HEAD origin/main)
           fi
 
           echo "Base SHA for diff: $BASE_SHA"
@@ -69,7 +69,7 @@ jobs:
 
           echo "files=$CHANGED" >> $GITHUB_OUTPUT
 
-        # --- Optional debug output ---
+      # --- Optional debug output ---
       - name: Debug environment and changed files
         run: |
           echo "::group::Debug Info"
@@ -81,14 +81,10 @@ jobs:
           echo "Main branch HEAD:"
           git fetch origin main
           git log origin/main -1 --oneline
+          echo "Merge base:"
+          git merge-base HEAD origin/main
           echo "Changed Rust files: ${{ steps.changed_files.outputs.files }}"
           echo "::endgroup::"
-
-      # --- Optional debug output ---
-      - name: Debug changed files
-        run: |
-          echo "GITHUB_EVENT_NAME=${GITHUB_EVENT_NAME}"
-          echo "Changed Rust files: ${{ steps.changed_files.outputs.files }}"
 
       # --- Run Rustfmt check ---
       - name: Run rustfmt
