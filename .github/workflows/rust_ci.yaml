@@ -67,7 +67,11 @@ jobs:
           echo "$CHANGED"
           echo "::endgroup::"
 
-          echo "files=$CHANGED" >> $GITHUB_OUTPUT
+          {
+            echo "files<<EOF"
+            echo "$CHANGED"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       # --- Optional debug output ---
       - name: Debug environment and changed files
