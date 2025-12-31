@@ -6,7 +6,7 @@ fn main() {
     let val = safe_option();
 
     // ❌ This will trigger Clippy lint from lib.rs deny
-    val.unwrap();
+    // val.unwrap();
 
     // ✅ Correct usage
     if let Some(v,) = val {
