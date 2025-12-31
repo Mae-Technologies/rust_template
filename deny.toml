@@ -1,4 +1,5 @@
 # deny.toml: Workspace-wide dependency policy enforcement
+#  To add license exceptions, create a file cwd/deny.exceptions.toml and add them there.
 
 [licenses]
 unused-allowed-license= "allow"
