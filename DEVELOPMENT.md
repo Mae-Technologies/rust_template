@@ -88,6 +88,7 @@ The `sync-rust-template` script copies `tests/common.rs` from the template → `
 
 ```bash
 sync-rust-template --force   # creates / overwrites tests/must.rs
+```
 
 ### cargo-deny (`deny.toml`)
 
