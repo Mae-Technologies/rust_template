@@ -128,13 +128,13 @@ else
   echo "Warning: Template workflow file $src_workflow not found — skipped"
 fi
 
-# 2. Handle DEVELOPMENT.md (copy from template's README.md)
-src_readme="$TEMPLATE_DIR/README.md"
+# 2. Handle DEVELOPMENT.md (copy from template's DEVELOPMENT.md)
+src_readme="$TEMPLATE_DIR/DEVELOPMENT.md"
 dst_dev="DEVELOPMENT.md"
 
 if [[ -f "$src_readme" ]]; then
   if [[ -f "$dst_dev" ]] && ! $FORCE; then
-    echo "Note: $dst_dev already exists → skipping copy from template README.md"
+    echo "Note: $dst_dev already exists → skipping copy from template DEVELOPMENT.md"
   else
     if [[ -f "$dst_dev" ]]; then
       echo "Overwriting $dst_dev (with --force)"
@@ -143,10 +143,35 @@ if [[ -f "$src_readme" ]]; then
       copied=$((copied + 1))
     fi
     cp -v "$src_readme" "$dst_dev"
-    echo "Created/Updated $dst_dev from template README.md"
+    echo "Created/Updated $dst_dev from template DEVELOPMENT.md"
   fi
 else
-  echo "Warning: Template README.md not found — skipping DEVELOPMENT.md" >&2
+  echo "Warning: Template .md not found — skipping DEVELOPMENT.md" >&2
+fi
+
+# 2b. Handle tests/common.rs → tests/unwrap.rs
+src_common="$TEMPLATE_DIR/tests/common.rs"
+dst_unwrap="./tests/must.rs"
+
+if [[ -f "$src_common" ]]; then
+  # Create tests/ directory if it doesn't exist
+  mkdir -p "./tests"
+
+  if [[ -f "$dst_unwrap" ]]; then
+    if $FORCE; then
+      cp -v "$src_common" "$dst_unwrap"
+      overwritten=$((overwritten + 1))
+      echo "Overwritten existing $dst_unwrap (with --force)"
+    else
+      echo "Note: $dst_unwrap already exists → skipping (use --force to overwrite)"
+    fi
+  else
+    cp -v "$src_common" "$dst_unwrap"
+    copied=$((copied + 1))
+    echo "Created $dst_unwrap from template common.rs"
+  fi
+else
+  echo "Warning: Template tests/common.rs not found — skipping must.rs" >&2
 fi
 
 # 3. Handle README.md (create minimal or append pointer if missing)
