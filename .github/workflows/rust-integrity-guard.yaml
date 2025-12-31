@@ -1,4 +1,4 @@
-name: Rust CI (Changed Files)
+name: Rust Integrity Guard
 
 on:
   push:
