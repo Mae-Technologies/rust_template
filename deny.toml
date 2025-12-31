@@ -18,5 +18,5 @@ deny = true
 # Only allow crates.io and your GitHub account repositories
 allow = [
     "registry+https://github.com/rust-lang/crates.io-index",
-    "git+https://github.com/YourGitHubUsername/*"
+    "git+https://github.com/MrCartaaa/*"
 ]
