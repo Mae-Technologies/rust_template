@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # sync-rust-template -- with --force + README → DEVELOPMENT.md handling
-# Copies standard config files + appends header to lib.rs + handles README/DEVELOPMENT.md
-
+# Copies standard config files + appends header to lib.rs + handles README/DEVELOPMENT.md + workflow file
 set -euo pipefail
 
 TEMPLATE_DIR="$HOME/dev/back_end/rust/rust_template"
@@ -18,7 +17,7 @@ while [[ $# -gt 0 ]]; do
     echo "Usage: $(basename "$0") [--force]"
     echo
     echo "  --force    Overwrite existing config files (clippy.toml, deny.toml, etc.)"
-    echo "             Does NOT force-overwrite DEVELOPMENT.md or README.md"
+    echo "             and DEVELOPMENT.md; also overwrite rust-integrity-guard.yaml if exists"
     echo
     exit 0
     ;;
@@ -51,10 +50,13 @@ declare -a CONFIG_FILES=(
   "rustfmt.toml"
 )
 
+# Special workflow file
+WORKFLOW_FILE=".github/workflows/rust-integrity-guard.yaml"
+
 # Files to append header (idempotent)
 declare -a HEADER_FILES=(
   "src/lib.rs"
-  # "src/main.rs"   # uncomment if desired
+  # "src/main.rs" # uncomment if desired
 )
 
 # ── Pre-check: config files (unless --force) ───────────────────────────
@@ -78,8 +80,8 @@ declare -i overwritten=0
 declare -i appended=0
 
 echo "Syncing from template: $TEMPLATE_DIR"
-echo "Target directory: $(pwd)"
-$FORCE && echo "(FORCE mode: will overwrite existing config files)"
+echo "Target directory:     $(pwd)"
+$FORCE && echo "(FORCE mode: will overwrite existing config files + DEVELOPMENT.md)"
 echo
 
 # 1. Copy config files
@@ -90,7 +92,6 @@ for file in "${CONFIG_FILES[@]}"; do
     echo "Warning: $src missing — skipped"
     continue
   }
-
   if [[ -e "$dst" ]]; then
     $FORCE && {
       cp -v "$src" "$dst"
@@ -102,25 +103,54 @@ for file in "${CONFIG_FILES[@]}"; do
   fi
 done
 
+# 1b. Handle .github/workflows/rust-integrity-guard.yaml
+src_workflow="$TEMPLATE_DIR/$WORKFLOW_FILE"
+dst_workflow="./$WORKFLOW_FILE"
+
+if [[ -f "$src_workflow" ]]; then
+  # Create parent directories if needed
+  mkdir -p "$(dirname "$dst_workflow")"
+
+  if [[ -e "$dst_workflow" ]]; then
+    if $FORCE; then
+      cp -v "$src_workflow" "$dst_workflow"
+      overwritten=$((overwritten + 1))
+      echo "Overwritten existing workflow file (with --force)"
+    else
+      echo "Note: $dst_workflow already exists → skipping (use --force to overwrite)"
+    fi
+  else
+    cp -v "$src_workflow" "$dst_workflow"
+    copied=$((copied + 1))
+    echo "Created workflow file: $dst_workflow"
+  fi
+else
+  echo "Warning: Template workflow file $src_workflow not found — skipped"
+fi
+
 # 2. Handle DEVELOPMENT.md (copy from template's README.md)
 src_readme="$TEMPLATE_DIR/README.md"
 dst_dev="DEVELOPMENT.md"
 
 if [[ -f "$src_readme" ]]; then
-  if [[ -f "$dst_dev" ]]; then
+  if [[ -f "$dst_dev" ]] && ! $FORCE; then
     echo "Note: $dst_dev already exists → skipping copy from template README.md"
   else
+    if [[ -f "$dst_dev" ]]; then
+      echo "Overwriting $dst_dev (with --force)"
+      overwritten=$((overwritten + 1))
+    else
+      copied=$((copied + 1))
+    fi
     cp -v "$src_readme" "$dst_dev"
-    copied=$((copied + 1))
-    echo "Created $dst_dev from template README.md"
+    echo "Created/Updated $dst_dev from template README.md"
   fi
 else
-  echo "Warning: Template README.md not found — skipping DEVELOPMENT.md creation" >&2
+  echo "Warning: Template README.md not found — skipping DEVELOPMENT.md" >&2
 fi
 
 # 3. Handle README.md (create minimal or append pointer if missing)
 readme_link="For development rules, see [DEVELOPMENT.md](DEVELOPMENT.md)"
-
 if [[ ! -f "README.md" ]]; then
   echo "$readme_link" >README.md
   echo "Created minimal README.md pointing to DEVELOPMENT.md"
@@ -152,19 +182,16 @@ for file in "${HEADER_FILES[@]}"; do
     echo "Warning: $src missing → skipping $dst"
     continue
   }
-
   # Simple presence check (first few non-blank lines)
   if head -n 40 "$dst" | grep -qF "$(head -n 8 "$src" | grep -v '^\s*$' | head -n 3)"; then
     echo "Note: Header already in $dst → skipping"
     continue
   fi
-
   {
     cat "$src"
     tail -n1 "$src" | grep -q '^$' || echo ""
     cat "$dst"
   } >"$dst.tmp" && mv "$dst.tmp" "$dst"
-
   echo "Appended header to $dst"
   appended=$((appended + 1))
 done
@@ -172,6 +199,6 @@ done
 echo
 echo "Done:"
 echo "  • $copied new file(s) created/copied"
-echo "  • $overwritten config file(s) overwritten (with --force)"
+echo "  • $overwritten file(s) overwritten (with --force)"
 echo "  • $appended file(s) updated (header or README pointer)"
 echo
