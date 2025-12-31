@@ -1,4 +1,3 @@
-```markdown
 # Rust Template
 
 A strict, modern Rust project template focused on code quality, safety, security, and reliability.
@@ -127,4 +126,3 @@ cargo deny check                                  # Licenses / sources / bans
 ```
 
 Enjoy writing safe, clean, and rigorously checked Rust code!
-```
