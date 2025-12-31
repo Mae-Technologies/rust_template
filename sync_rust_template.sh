@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # sync-rust-template -- with --force + README → DEVELOPMENT.md handling
-# Copies standard config files + appends header to lib.rs + handles README/DEVELOPMENT.md + workflow file
+# Copies standard config files + appends header to lib.rs + handles README/DEVELOPMENT.md + workflow file + pre-push hook + .gitignore
 set -euo pipefail
 
 TEMPLATE_DIR="$HOME/dev/back_end/rust/rust_template"
@@ -17,7 +17,7 @@ while [[ $# -gt 0 ]]; do
     echo "Usage: $(basename "$0") [--force]"
     echo
     echo "  --force    Overwrite existing config files (clippy.toml, deny.toml, etc.)"
-    echo "             and DEVELOPMENT.md; also overwrite rust-integrity-guard.yaml if exists"
+    echo "             and DEVELOPMENT.md; also overwrite rust-integrity-guard.yaml, pre-push hook, and .gitignore if exists"
     echo
     exit 0
     ;;
@@ -48,10 +48,14 @@ declare -a CONFIG_FILES=(
   "deny.toml"
   "rust-toolchain.toml"
   "rustfmt.toml"
+  ".gitignore"
 )
 
 # Special workflow file
 WORKFLOW_FILE=".github/workflows/rust-integrity-guard.yaml"
+
+# Pre-push hook
+HOOK_FILE=".git/hooks/pre-push"
 
 # Files to append header (idempotent)
 declare -a HEADER_FILES=(
@@ -81,7 +85,7 @@ declare -i appended=0
 
 echo "Syncing from template: $TEMPLATE_DIR"
 echo "Target directory:     $(pwd)"
-$FORCE && echo "(FORCE mode: will overwrite existing config files + DEVELOPMENT.md)"
+$FORCE && echo "(FORCE mode: will overwrite existing config files + DEVELOPMENT.md + pre-push hook + .gitignore)"
 echo
 
 # 1. Copy config files
@@ -94,11 +98,11 @@ for file in "${CONFIG_FILES[@]}"; do
   }
   if [[ -e "$dst" ]]; then
     $FORCE && {
-      cp -v "$src" "$dst"
+      cp "$src" "$dst"
       overwritten=$((overwritten + 1))
     } || echo "Skipped $dst (use --force to overwrite)"
   else
-    cp -v "$src" "$dst"
+    cp "$src" "$dst"
     copied=$((copied + 1))
   fi
 done
@@ -108,19 +112,17 @@ src_workflow="$TEMPLATE_DIR/$WORKFLOW_FILE"
 dst_workflow="./$WORKFLOW_FILE"
 
 if [[ -f "$src_workflow" ]]; then
-  # Create parent directories if needed
   mkdir -p "$(dirname "$dst_workflow")"
-
   if [[ -e "$dst_workflow" ]]; then
     if $FORCE; then
-      cp -v "$src_workflow" "$dst_workflow"
+      cp "$src_workflow" "$dst_workflow"
       overwritten=$((overwritten + 1))
       echo "Overwritten existing workflow file (with --force)"
     else
       echo "Note: $dst_workflow already exists → skipping (use --force to overwrite)"
     fi
   else
-    cp -v "$src_workflow" "$dst_workflow"
+    cp "$src_workflow" "$dst_workflow"
     copied=$((copied + 1))
     echo "Created workflow file: $dst_workflow"
   fi
@@ -128,7 +130,32 @@ else
   echo "Warning: Template workflow file $src_workflow not found — skipped"
 fi
 
-# 2. Handle DEVELOPMENT.md (copy from template's DEVELOPMENT.md)
+# 1c. Handle pre-push hook
+src_hook="$TEMPLATE_DIR/.git/hooks/pre-push"
+dst_hook="./.git/hooks/pre-push"
+
+if [[ -f "$src_hook" ]]; then
+  mkdir -p "$(dirname "$dst_hook")"
+  if [[ -e "$dst_hook" ]]; then
+    if $FORCE; then
+      cp "$src_hook" "$dst_hook"
+      chmod +x "$dst_hook"
+      overwritten=$((overwritten + 1))
+      echo "Overwritten existing pre-push hook (with --force)"
+    else
+      echo "Note: $dst_hook already exists → skipping (use --force to overwrite)"
+    fi
+  else
+    cp "$src_hook" "$dst_hook"
+    chmod +x "$dst_hook"
+    copied=$((copied + 1))
+    echo "Created pre-push hook: $dst_hook"
+  fi
+else
+  echo "Warning: Template pre-push hook $src_hook not found — skipped"
+fi
+
+# 2. Handle DEVELOPMENT.md
 src_readme="$TEMPLATE_DIR/DEVELOPMENT.md"
 dst_dev="DEVELOPMENT.md"
 
@@ -136,37 +163,30 @@ if [[ -f "$src_readme" ]]; then
   if [[ -f "$dst_dev" ]] && ! $FORCE; then
     echo "Note: $dst_dev already exists → skipping copy from template DEVELOPMENT.md"
   else
-    if [[ -f "$dst_dev" ]]; then
-      echo "Overwriting $dst_dev (with --force)"
-      overwritten=$((overwritten + 1))
-    else
-      copied=$((copied + 1))
-    fi
-    cp -v "$src_readme" "$dst_dev"
+    [[ -f "$dst_dev" ]] && echo "Overwriting $dst_dev (with --force)" && overwritten=$((overwritten + 1)) || copied=$((copied + 1))
+    cp "$src_readme" "$dst_dev"
     echo "Created/Updated $dst_dev from template DEVELOPMENT.md"
   fi
 else
   echo "Warning: Template .md not found — skipping DEVELOPMENT.md" >&2
 fi
 
-# 2b. Handle tests/common.rs → tests/unwrap.rs
+# 2b. Handle tests/common.rs → tests/must.rs
 src_common="$TEMPLATE_DIR/tests/common.rs"
 dst_unwrap="./tests/must.rs"
 
 if [[ -f "$src_common" ]]; then
-  # Create tests/ directory if it doesn't exist
   mkdir -p "./tests"
-
   if [[ -f "$dst_unwrap" ]]; then
     if $FORCE; then
-      cp -v "$src_common" "$dst_unwrap"
+      cp "$src_common" "$dst_unwrap"
       overwritten=$((overwritten + 1))
       echo "Overwritten existing $dst_unwrap (with --force)"
     else
       echo "Note: $dst_unwrap already exists → skipping (use --force to overwrite)"
     fi
   else
-    cp -v "$src_common" "$dst_unwrap"
+    cp "$src_common" "$dst_unwrap"
     copied=$((copied + 1))
     echo "Created $dst_unwrap from template common.rs"
   fi
@@ -174,14 +194,13 @@ else
   echo "Warning: Template tests/common.rs not found — skipping must.rs" >&2
 fi
 
-# 3. Handle README.md (create minimal or append pointer if missing)
+# 3. Handle README.md
 readme_link="For development rules, see [DEVELOPMENT.md](DEVELOPMENT.md)"
 if [[ ! -f "README.md" ]]; then
   echo "$readme_link" >README.md
   echo "Created minimal README.md pointing to DEVELOPMENT.md"
   copied=$((copied + 1))
 else
-  # Check if the line (or very similar) already exists
   if grep -qF "DEVELOPMENT.md" README.md 2>/dev/null; then
     echo "Note: README.md already references DEVELOPMENT.md → skipping append"
   else
@@ -207,7 +226,6 @@ for file in "${HEADER_FILES[@]}"; do
     echo "Warning: $src missing → skipping $dst"
     continue
   }
-  # Simple presence check (first few non-blank lines)
   if head -n 40 "$dst" | grep -qF "$(head -n 8 "$src" | grep -v '^\s*$' | head -n 3)"; then
     echo "Note: Header already in $dst → skipping"
     continue
