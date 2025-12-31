@@ -5,5 +5,5 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 
 pub fn print_me() {
-    println!("hello!");
+    println!("hello world!");
 }
