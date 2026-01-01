@@ -35,7 +35,7 @@ if [[ "$EXPECTED_SHA" != "$REMOTE_SHA" ]]; then
   echo "rust_template $TEMPLATE_BRANCH SHA : $REMOTE_SHA"
   echo "This project expects              : $EXPECTED_SHA"
   echo
-  echo "Update from template by running $(sync_rust_template.sh)"
+  echo "Update from template by running sync_rust_template.sh, see DEVELOPMENT.md file for more details."
   echo "Committing changes..."
   exit 0
 fi
