@@ -97,17 +97,17 @@ run() {
 # --- Always run formatting ---
 run "rustfmt" cargo fmt -- --check
 
-# --- Tests conditional logic ---
-if [[ -n "${NO_TEST:-}" ]]; then
-  echo "⚡ NO_TEST set — skipping all tests"
-else
-  if [[ -n "${FAST_PUSH:-}" ]]; then
-    # FAST_PUSH set → run only normal tests
-    run "tests" cargo test
-  else
-    # FAST_PUSH not set → run Miri tests only
+# --- Conditionally run tests ---
+if [[ -z "${NO_TEST:-}" ]]; then
+  run "tests" cargo test
+
+  if [[ -z "${FAST_PUSH:-}" ]]; then
     run "miri" cargo miri test
+  else
+    echo "⚡ FAST_PUSH set — skipping Miri"
   fi
+else
+  echo "⚡ NO_TEST set — skipping tests and Miri"
 fi
 
 # --- Always run lint/audit/deny
