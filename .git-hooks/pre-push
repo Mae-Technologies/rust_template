@@ -43,8 +43,7 @@ if { [[ "$CURRENT_REMOTE_URL" == "$EXPECTED_SSH" ]] || [[ "$CURRENT_REMOTE_URL" 
 
     # Avoid infinite amend loops
     if ! git log -1 --pretty=%B | grep -q "$TAG_MARKER"; then
-      git commit --amend -C HEAD -m "$(git log -1 --pretty=%B)
-$TAG_MARKER"
+      git commit --amend -C HEAD -m "$(git log -1 --pretty=%B) $TAG_MARKER"
       echo "✔ Commit amended with template SHA"
     else
       echo "ℹ️ Commit already contains template SHA — skipping amend"
