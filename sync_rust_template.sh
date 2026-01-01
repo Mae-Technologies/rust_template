@@ -55,7 +55,7 @@ declare -a CONFIG_FILES=(
 WORKFLOW_FILE=".github/workflows/rust-integrity-guard.yaml"
 
 # Pre-push hook
-HOOK_FILE=".git/hooks/pre-push"
+HOOK_FILE=".git-hooks/pre-push"
 
 # Files to append header (idempotent)
 declare -a HEADER_FILES=(

@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+########################################
+# TEMPLATE SETTINGS
+########################################
+EXPECTED_SSH="git@github.com:MrCartaaa/rust_template.git"
+EXPECTED_HTTPS="https://github.com/MrCartaaa/rust_template.git"
+TEMPLATE_FILE=".rust_template_version"
+PROTECTED_BRANCH="main"
+TAG_MARKER="[template-version]"
+########################################
+
+# Args from Git
+REMOTE_NAME="${1:-origin}"
+REMOTE_REF="${2:-}"
+
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+CURRENT_REMOTE_URL=$(git remote get-url "$REMOTE_NAME")
+HEAD_SHA=$(git rev-parse HEAD)
+
+########################################
+# 0️⃣ TEMPLATE VERSION SYNC
+#    Only runs if:
+#      - repo matches template
+#      - branch == main
+#      - file does not already match HEAD SHA
+#    Does NOT exit, just amends commit if needed
+########################################
+if { [[ "$CURRENT_REMOTE_URL" == "$EXPECTED_SSH" ]] || [[ "$CURRENT_REMOTE_URL" == "$EXPECTED_HTTPS" ]]; } &&
+  [[ "$CURRENT_BRANCH" == "$PROTECTED_BRANCH" ]]; then
+
+  echo "📦 rust_template detected — syncing template version"
+  echo "🌿 Branch: $CURRENT_BRANCH"
+  echo "🔗 Remote: $CURRENT_REMOTE_URL"
+  echo
+
+  # Only update if needed
+  if [[ ! -f "$TEMPLATE_FILE" ]] || ! grep -qx "$HEAD_SHA" "$TEMPLATE_FILE"; then
+    echo "✏️  Writing HEAD SHA ($HEAD_SHA) to $TEMPLATE_FILE"
+    echo "$HEAD_SHA" >"$TEMPLATE_FILE"
+    git add "$TEMPLATE_FILE"
+
+    # Avoid infinite amend loops
+    if ! git log -1 --pretty=%B | grep -q "$TAG_MARKER"; then
+      git commit --amend -C HEAD -m "$(git log -1 --pretty=%B)
+$TAG_MARKER"
+      echo "✔ Commit amended with template SHA"
+    else
+      echo "ℹ️ Commit already contains template SHA — skipping amend"
+    fi
+  else
+    echo "✔ $TEMPLATE_FILE already up to date"
+  fi
+  echo
+fi
+
+########################################
+# 1️⃣ EXISTING RUST PRE-PUSH CHECKS
+########################################
+
+# Only run in interactive shells
+if [[ ! -t 1 ]]; then
+  exit 0
+fi
+
+# Global bypass
+if [[ -n "${SKIP_RUST_GATE:-}" ]]; then
+  echo "⚠️  SKIP_RUST_GATE set — skipping Rust quality gate"
+  exit 0
+fi
+
+# Detect Rust project by policy files
+required_files=(
+  clippy.toml
+  deny.toml
+  rustfmt.toml
+  rust-toolchain.toml
+)
+
+for f in "${required_files[@]}"; do
+  [[ -f "$f" ]] || exit 0
+done
+
+echo "🦀 Rust quality gate detected — running pre-push checks"
+echo
+
+run() {
+  echo "▶ $1"
+  shift
+  "$@" || {
+    echo "❌ $1 failed — aborting push"
+    exit 1
+  }
+}
+
+# --- Always run formatting ---
+run "rustfmt" cargo fmt -- --check
+
+# --- Tests conditional logic ---
+if [[ -n "${NO_TEST:-}" ]]; then
+  echo "⚡ NO_TEST set — skipping all tests"
+else
+  if [[ -n "${FAST_PUSH:-}" ]]; then
+    # FAST_PUSH set → run only normal tests
+    run "tests" cargo test
+  else
+    # FAST_PUSH not set → run Miri tests only
+    run "miri" cargo miri test
+  fi
+fi
+
+# --- Always run lint/audit/deny
+run "clippy" cargo clippy -- -D warnings
+run "cargo audit" cargo audit
+run "cargo deny" cargo deny check
+
+echo
+echo "✅ All Rust checks passed — continuing push"

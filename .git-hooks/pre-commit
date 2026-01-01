@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+TEMPLATE_FILE=".rust_template_version"
+TEMPLATE_REMOTE="https://github.com/MrCartaaa/rust_template.git"
+TEMPLATE_BRANCH="main"
+
+# --- Ensure version file exists ---
+if [[ ! -f "$TEMPLATE_FILE" ]]; then
+  echo "❌ ERROR: $TEMPLATE_FILE not found."
+  echo "This project must declare which template commit it is based on."
+  exit 1
+fi
+
+EXPECTED_SHA=$(tr -d ' \n' <"$TEMPLATE_FILE")
+
+if [[ -z "$EXPECTED_SHA" ]]; then
+  echo "❌ ERROR: $TEMPLATE_FILE is empty."
+  exit 1
+fi
+
+# --- Fetch current SHA of repo-A/main ---
+REMOTE_SHA=$(git ls-remote "$TEMPLATE_REMOTE" "refs/heads/$TEMPLATE_BRANCH" | awk '{print $1}')
+
+if [[ -z "$REMOTE_SHA" ]]; then
+  echo "❌ ERROR: Could not read remote SHA from:"
+  echo "   $TEMPLATE_REMOTE ($TEMPLATE_BRANCH)"
+  exit 1
+fi
+
+# --- Compare ---
+if [[ "$EXPECTED_SHA" != "$REMOTE_SHA" ]]; then
+  echo "❌ Template out of date."
+  echo
+  echo "rust_template $TEMPLATE_BRANCH SHA : $REMOTE_SHA"
+  echo "This project expects              : $EXPECTED_SHA"
+  echo
+  echo "Update from template by running $(sync_rust_template.sh)"
+  echo "Committing changes..."
+  exit 0
+fi
+
+echo "✔ Template version OK ($EXPECTED_SHA)"
+exit 0
