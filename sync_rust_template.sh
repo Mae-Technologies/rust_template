@@ -55,7 +55,7 @@ declare -a CONFIG_FILES=(
 WORKFLOW_FILE=".github/workflows/rust-integrity-guard.yaml"
 
 # Pre-push hook
-HOOK_FILE=".git-hooks/pre-push"
+HOOK_DIR=".git-hooks/"
 
 # Files to append header (idempotent)
 declare -a HEADER_FILES=(
@@ -131,29 +131,43 @@ else
 fi
 
 # 1c. Handle pre-push hook
-src_hook="$TEMPLATE_DIR/.git/hooks/pre-push"
-dst_hook="./.git/hooks/pre-push"
 
-if [[ -f "$src_hook" ]]; then
-  mkdir -p "$(dirname "$dst_hook")"
-  if [[ -e "$dst_hook" ]]; then
-    if $FORCE; then
-      cp "$src_hook" "$dst_hook"
-      chmod +x "$dst_hook"
+SRC_DIR="$TEMPLATE_DIR/.git-hooks"
+DST_DIR="./.git/hooks"
+FORCE=${FORCE:-false}
+
+# Ensure source exists
+if [[ ! -d "$SRC_DIR" ]]; then
+  echo "Warning: Source hooks directory $SRC_DIR does not exist — nothing to copy"
+  exit 0
+fi
+
+# Loop over all files in source directory
+while IFS= read -r -d '' src_path; do
+  # Relative path under SRC_DIR
+  rel_path="${src_path#$SRC_DIR/}"
+  dst_path="$DST_DIR/$rel_path"
+
+  # Make sure destination directory exists
+  mkdir -p "$(dirname "$dst_path")"
+
+  if [[ -e "$dst_path" ]]; then
+    if [[ "$FORCE" == true ]]; then
+      cp "$src_path" "$dst_path"
+      chmod +x "$dst_path"
       overwritten=$((overwritten + 1))
-      echo "Overwritten existing pre-push hook (with --force)"
+      echo "Overwritten existing hook: $dst_path (with --force)"
     else
-      echo "Note: $dst_hook already exists → skipping (use --force to overwrite)"
+      echo "Note: $dst_path already exists → skipping (use --force to overwrite)"
     fi
   else
-    cp "$src_hook" "$dst_hook"
-    chmod +x "$dst_hook"
+    cp "$src_path" "$dst_path"
+    chmod +x "$dst_path"
     copied=$((copied + 1))
-    echo "Created pre-push hook: $dst_hook"
+    echo "Created hook: $dst_path"
   fi
-else
-  echo "Warning: Template pre-push hook $src_hook not found — skipped"
-fi
+
+done < <(find "$SRC_DIR" -type f -print0)
 
 # 2. Handle DEVELOPMENT.md
 src_readme="$TEMPLATE_DIR/DEVELOPMENT.md"
@@ -238,6 +252,28 @@ for file in "${HEADER_FILES[@]}"; do
   echo "Appended header to $dst"
   appended=$((appended + 1))
 done
+
+# 5. Copy .rust_template_version
+src_version="$TEMPLATE_DIR/.rust_template_version"
+dst_version="./.rust_template_version"
+
+if [[ -f "$src_version" ]]; then
+  if [[ -f "$dst_version" ]]; then
+    if $FORCE; then
+      cp "$src_version" "$dst_version"
+      overwritten=$((overwritten + 1))
+      echo "Overwritten existing .rust_template_version (with --force)"
+    else
+      echo "Note: .rust_template_version already exists → skipping (use --force to overwrite)"
+    fi
+  else
+    cp "$src_version" "$dst_version"
+    copied=$((copied + 1))
+    echo "Created .rust_template_version from template"
+  fi
+else
+  echo "Warning: Template .rust_template_version not found — skipped"
+fi
 
 echo
 echo "Done:"
