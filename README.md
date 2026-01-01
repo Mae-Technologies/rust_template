@@ -17,9 +17,13 @@ This template enforces Rust best practices using nightly tooling, aggressive lin
 - **Git pre-commit hook** that checks for latest rust_template changes
 - **Comprehensive .gitignore** to exclude build artifacts, temporary files, environment files, Docker outputs, and IDE/editor settings
 
+---
+
 For development rules, see [DEVELOPMENT.md](DEVELOPMENT.md)
 
-## Recommended Use:
+---
+
+### Recommended Use:
 1. create a new project with `cargo new [new-rust-project]`
 2. run script `sync_rust_template.sh` inside the project directory to copy all necessary rust-template config files to the current directory
 
@@ -28,13 +32,11 @@ If there is a new version of the `rust_template` repo:
 2. run `sync_rust_template.sh -f` from inside the project directory to override the config files
   - see [DEVELOPMENT.md](DEVELOPMENT.md) for more information
 
-## Recommendations When Forking or Using as a Template
+#### Recommendations When Forking or Using as a Template
 
-- **sym-link from  `.git-hooks/`**:
-Example:
+- **Direct git to the correct directory**:
 ```bash
-chmod +x .git-hooks/pre-push
-ln -s .git-hooks/pre-push .git/hooks/pre-push
+git config core.hooksPath .git-hooks # run in root directory of project
 ```
 - **remove the `sync_rust_template.sh` file**
 ```bash
