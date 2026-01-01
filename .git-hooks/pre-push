@@ -36,14 +36,16 @@ if { [[ "$CURRENT_REMOTE_URL" == "$EXPECTED_SSH" ]] || [[ "$CURRENT_REMOTE_URL" 
   echo
 
   # Only update if needed
-  if [[ ! -f "$TEMPLATE_FILE" ]] || ! grep -qx "$HEAD_SHA" "$TEMPLATE_FILE"; then
-    echo "✏️  Writing HEAD SHA ($HEAD_SHA) to $TEMPLATE_FILE"
-    echo "$HEAD_SHA" >"$TEMPLATE_FILE"
+  if [[ ! -f "$TEMPLATE_FILE" ]] || ! grep -qxF "$HEAD_SHA" "$TEMPLATE_FILE"; then
+    # Normalize line endings to LF to avoid CRLF warnings
+    echo "$HEAD_SHA" | tr -d '\r' >"$TEMPLATE_FILE"
     git add "$TEMPLATE_FILE"
 
     # Avoid infinite amend loops
-    if ! git log -1 --pretty=%B | grep -q "$TAG_MARKER"; then
-      git commit --amend -C HEAD -m "$(git log -1 --pretty=%B) $TAG_MARKER"
+    if ! git log -1 --pretty=%B | grep -qF "$TAG_MARKER"; then
+      # Amend commit with TAG_MARKER appended
+      COMMIT_MSG=$(git log -1 --pretty=%B)
+      git commit --amend -F <(printf "%s\n\n%s\n" "$COMMIT_MSG" "$TAG_MARKER")
       echo "✔ Commit amended with template SHA"
     else
       echo "ℹ️ Commit already contains template SHA — skipping amend"
