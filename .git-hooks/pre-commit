@@ -60,7 +60,6 @@ if [[ "$IS_TEMPLATE_REPO" == true ]]; then
     git add "$TEMPLATE_FILE"
     ok "⚠️  Template version updated to: $NEW_SHA  "
     info "Included in current commit automatically."
-    # no exit → commit proceeds
   fi
 
   ok "✔ Template version changed — commit allowed"
