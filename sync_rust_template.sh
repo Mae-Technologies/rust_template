@@ -4,10 +4,20 @@
 set -euo pipefail
 
 ########################################
+# Colors
+########################################
+RED="\033[31m"
+GREEN="\033[32m"
+YELLOW="\033[33m"
+BLUE="\033[34m"
+BOLD="\033[1m"
+RESET="\033[0m"
+
+########################################
 # PRE-CHECK: ensure RUST_TEMPLATE_DIR is set, points to the correct repo, clean, and up-to-date
 ########################################
 if [[ -z "${RUST_TEMPLATE_DIR:-}" ]]; then
-  echo "❌ ERROR: RUST_TEMPLATE_DIR environment variable is not set."
+  echo -e "${RED}❌  ERROR: RUST_TEMPLATE_DIR environment variable is not set.${RESET}"
   echo "   Please set RUST_TEMPLATE_DIR to your local rust_template repository."
   exit 1
 fi
@@ -17,7 +27,7 @@ ORIG_DIR=$(pwd)
 
 # Go to template directory
 cd "$RUST_TEMPLATE_DIR" || {
-  echo "❌ ERROR: Cannot cd to RUST_TEMPLATE_DIR: $RUST_TEMPLATE_DIR"
+  echo -e "${RED}❌  ERROR: Cannot cd to RUST_TEMPLATE_DIR: $RUST_TEMPLATE_DIR${RESET}"
   exit 1
 }
 
@@ -28,7 +38,7 @@ CURRENT_REMOTE=$(git remote get-url origin 2>/dev/null || true)
 TEMPLATE_BRANCH="main"
 
 if [[ "$CURRENT_REMOTE" != "$TEMPLATE_REMOTE_EXPECTED" && "$CURRENT_REMOTE" != "$TEMPLATE_REMOTE_EXPECTED_SSH" ]]; then
-  echo "❌ ERROR: The repo at RUST_TEMPLATE_DIR is not the expected rust_template repository."
+  echo -e "${RED}❌  ERROR: The repo at RUST_TEMPLATE_DIR is not the expected rust_template repository.${RESET}"
   echo "   Expected: $TEMPLATE_REMOTE_EXPECTED or $TEMPLATE_REMOTE_EXPECTED_SSH"
   echo "   Found   : $CURRENT_REMOTE"
   cd "$ORIG_DIR"
@@ -37,21 +47,23 @@ fi
 
 # Check for clean working tree
 if [[ -n "$(git status --porcelain)" ]]; then
-  echo "❌ ERROR: Working tree in RUST_TEMPLATE_DIR is dirty. Commit or stash changes before syncing."
+  echo -e "${RED}❌  ERROR: Working tree in RUST_TEMPLATE_DIR is dirty. Commit or stash changes before syncing.${RESET}"
   git status --short
   cd "$ORIG_DIR"
   exit 1
 fi
 
 # Fetch latest remote state quietly
+echo -ne "${BLUE}⏱  Fetching latest rust_template SHA...${RESET}"
 git fetch --quiet origin "$TEMPLATE_BRANCH"
+echo " done"
 
 # Ensure local HEAD == remote branch SHA
 LOCAL_SHA=$(git rev-parse HEAD)
 REMOTE_SHA=$(git rev-parse "origin/$TEMPLATE_BRANCH")
 
 if [[ "$LOCAL_SHA" != "$REMOTE_SHA" ]]; then
-  echo "❌ ERROR: Local rust_template is not up-to-date with origin/$TEMPLATE_BRANCH."
+  echo -e "${RED}❌  ERROR: Local rust_template is not up-to-date with origin/$TEMPLATE_BRANCH.${RESET}"
   echo "   Local SHA : $LOCAL_SHA"
   echo "   Remote SHA: $REMOTE_SHA"
   echo "   Please pull or reset your template repo before syncing."
@@ -62,8 +74,11 @@ fi
 # Return to original directory
 cd "$ORIG_DIR" || exit 1
 
-echo "⏱ Pre-check passed: correct rust_template repo, clean working tree, and up-to-date with remote"
+echo -e "${GREEN}✔  Pre-check passed: correct rust_template repo, clean working tree, and up-to-date with remote${RESET}"
 
+########################################
+# Sync process
+########################################
 TEMPLATE_DIR="$HOME/dev/back_end/rust/rust_template"
 FORCE=false
 
@@ -75,7 +90,7 @@ while [[ $# -gt 0 ]]; do
     shift
     ;;
   --help | -h)
-    echo "Usage: $(basename "$0") [--force]"
+    echo -e "${BLUE}⏱  Usage: $(basename "$0") [--force]${RESET}"
     echo
     echo "  --force    Overwrite existing config files (clippy.toml, deny.toml, etc.)"
     echo "             and DEVELOPMENT.md; also overwrite rust-integrity-guard.yaml, pre-push hook, and .gitignore if exists"
@@ -83,7 +98,7 @@ while [[ $# -gt 0 ]]; do
     exit 0
     ;;
   *)
-    echo "Unknown option: $1" >&2
+    echo -e "${RED}❌  Unknown option: $1${RESET}" >&2
     echo "Use --help for usage" >&2
     exit 1
     ;;
@@ -92,13 +107,13 @@ done
 
 # ── Early exit if template doesn't exist ───────────────────────────────
 if [[ ! -d "$TEMPLATE_DIR" ]]; then
-  echo "Error: Template directory not found: $TEMPLATE_DIR" >&2
+  echo -e "${RED}❌  Error: Template directory not found: $TEMPLATE_DIR${RESET}" >&2
   exit 1
 fi
 
 # ── Check: is this a Rust project? ─────────────────────────────────────
 if [[ ! -f "Cargo.toml" ]]; then
-  echo "Error: Not a Rust project — Cargo.toml not found in current directory" >&2
+  echo -e "${RED}❌  Error: Not a Rust project — Cargo.toml not found in current directory${RESET}" >&2
   echo "       (current dir: $(pwd))" >&2
   exit 1
 fi
@@ -131,10 +146,10 @@ if ! $FORCE; then
     [[ -e "./$file" ]] && existing_config+=("$file")
   done
   if [ ${#existing_config[@]} -gt 0 ]; then
-    echo "Error: The following config files already exist:" >&2
+    echo -e "${RED}❌  Error: The following config files already exist:${RESET}" >&2
     printf "  - %s\n" "${existing_config[@]}" >&2
     echo >&2
-    echo "Use --force to overwrite them." >&2
+    echo -e "${YELLOW}⚠️  Use --force to overwrite them.${RESET}" >&2
     exit 1
   fi
 fi
@@ -144,9 +159,9 @@ declare -i copied=0
 declare -i overwritten=0
 declare -i appended=0
 
-echo "Syncing from template: $TEMPLATE_DIR"
-echo "Target directory:     $(pwd)"
-$FORCE && echo "(FORCE mode: will overwrite existing config files + DEVELOPMENT.md + pre-push hook + .gitignore)"
+echo -e "${BLUE}⏱  Syncing from template: $TEMPLATE_DIR${RESET}"
+echo -e "${BLUE}⏱  Target directory:     $(pwd)${RESET}"
+$FORCE && echo -e "${YELLOW}⚠️  FORCE mode: will overwrite existing config files + DEVELOPMENT.md + pre-push hook + .gitignore${RESET}"
 echo
 
 # 1. Copy config files
@@ -154,21 +169,21 @@ for file in "${CONFIG_FILES[@]}"; do
   src="$TEMPLATE_DIR/$file"
   dst="./$file"
   [[ ! -f "$src" ]] && {
-    echo "Warning: $src missing — skipped"
+    echo -e "${YELLOW}⚠️  Warning: $src missing — skipped${RESET}"
     continue
   }
   if [[ -e "$dst" ]]; then
     $FORCE && {
       cp "$src" "$dst"
       overwritten=$((overwritten + 1))
-    } || echo "Skipped $dst (use --force to overwrite)"
+    } || echo -e "${BLUE}📝  Skipped $dst (use --force to overwrite)${RESET}"
   else
     cp "$src" "$dst"
     copied=$((copied + 1))
   fi
 done
 
-# 1b. Handle .github/workflows/rust-integrity-guard.yaml
+# 1b. Handle workflow file
 src_workflow="$TEMPLATE_DIR/$WORKFLOW_FILE"
 dst_workflow="./$WORKFLOW_FILE"
 
@@ -178,38 +193,32 @@ if [[ -f "$src_workflow" ]]; then
     if $FORCE; then
       cp "$src_workflow" "$dst_workflow"
       overwritten=$((overwritten + 1))
-      echo "Overwritten existing workflow file (with --force)"
+      echo -e "${GREEN}✔  Overwritten existing workflow file (with --force)${RESET}"
     else
-      echo "Note: $dst_workflow already exists → skipping (use --force to overwrite)"
+      echo -e "${BLUE}📝  Note: $dst_workflow already exists → skipping (use --force to overwrite)${RESET}"
     fi
   else
     cp "$src_workflow" "$dst_workflow"
     copied=$((copied + 1))
-    echo "Created workflow file: $dst_workflow"
+    echo -e "${GREEN}✔  Created workflow file: $dst_workflow${RESET}"
   fi
 else
-  echo "Warning: Template workflow file $src_workflow not found — skipped"
+  echo -e "${YELLOW}⚠️  Warning: Template workflow file $src_workflow not found — skipped${RESET}"
 fi
 
-# 1c. Handle pre-push hook
-
+# 1c. Handle pre-push hooks
 SRC_DIR="$TEMPLATE_DIR/.git-hooks"
 DST_DIR="./.git/hooks"
 FORCE=${FORCE:-false}
 
-# Ensure source exists
 if [[ ! -d "$SRC_DIR" ]]; then
-  echo "Warning: Source hooks directory $SRC_DIR does not exist — nothing to copy"
+  echo -e "${YELLOW}⚠️  Warning: Source hooks directory $SRC_DIR does not exist — nothing to copy${RESET}"
   exit 0
 fi
 
-# Loop over all files in source directory
 while IFS= read -r -d '' src_path; do
-  # Relative path under SRC_DIR
   rel_path="${src_path#$SRC_DIR/}"
   dst_path="$DST_DIR/$rel_path"
-
-  # Make sure destination directory exists
   mkdir -p "$(dirname "$dst_path")"
 
   if [[ -e "$dst_path" ]]; then
@@ -217,17 +226,16 @@ while IFS= read -r -d '' src_path; do
       cp "$src_path" "$dst_path"
       chmod +x "$dst_path"
       overwritten=$((overwritten + 1))
-      echo "Overwritten existing hook: $dst_path (with --force)"
+      echo -e "${GREEN}✔  Overwritten existing hook: $dst_path (with --force)${RESET}"
     else
-      echo "Note: $dst_path already exists → skipping (use --force to overwrite)"
+      echo -e "${BLUE}📝  Note: $dst_path already exists → skipping (use --force to overwrite)${RESET}"
     fi
   else
     cp "$src_path" "$dst_path"
     chmod +x "$dst_path"
     copied=$((copied + 1))
-    echo "Created hook: $dst_path"
+    echo -e "${GREEN}✔  Created hook: $dst_path${RESET}"
   fi
-
 done < <(find "$SRC_DIR" -type f -print0)
 
 # 2. Handle DEVELOPMENT.md
@@ -236,14 +244,14 @@ dst_dev="DEVELOPMENT.md"
 
 if [[ -f "$src_readme" ]]; then
   if [[ -f "$dst_dev" ]] && ! $FORCE; then
-    echo "Note: $dst_dev already exists → skipping copy from template DEVELOPMENT.md"
+    echo -e "${BLUE}📝  Note: $dst_dev already exists → skipping copy from template DEVELOPMENT.md${RESET}"
   else
-    [[ -f "$dst_dev" ]] && echo "Overwriting $dst_dev (with --force)" && overwritten=$((overwritten + 1)) || copied=$((copied + 1))
+    [[ -f "$dst_dev" ]] && echo -e "${YELLOW}⚠️  Overwriting $dst_dev (with --force)${RESET}" && overwritten=$((overwritten + 1)) || copied=$((copied + 1))
     cp "$src_readme" "$dst_dev"
-    echo "Created/Updated $dst_dev from template DEVELOPMENT.md"
+    echo -e "${GREEN}✔  Created/Updated $dst_dev from template DEVELOPMENT.md${RESET}"
   fi
 else
-  echo "Warning: Template .md not found — skipping DEVELOPMENT.md" >&2
+  echo -e "${YELLOW}⚠️  Warning: Template .md not found — skipping DEVELOPMENT.md${RESET}"
 fi
 
 # 2b. Handle tests/common.rs → tests/must.rs
@@ -256,35 +264,35 @@ if [[ -f "$src_common" ]]; then
     if $FORCE; then
       cp "$src_common" "$dst_unwrap"
       overwritten=$((overwritten + 1))
-      echo "Overwritten existing $dst_unwrap (with --force)"
+      echo -e "${GREEN}✔  Overwritten existing $dst_unwrap (with --force)${RESET}"
     else
-      echo "Note: $dst_unwrap already exists → skipping (use --force to overwrite)"
+      echo -e "${BLUE}📝  Note: $dst_unwrap already exists → skipping (use --force to overwrite)${RESET}"
     fi
   else
     cp "$src_common" "$dst_unwrap"
     copied=$((copied + 1))
-    echo "Created $dst_unwrap from template common.rs"
+    echo -e "${GREEN}✔  Created $dst_unwrap from template common.rs${RESET}"
   fi
 else
-  echo "Warning: Template tests/common.rs not found — skipping must.rs" >&2
+  echo -e "${YELLOW}⚠️  Warning: Template tests/common.rs not found — skipping must.rs${RESET}"
 fi
 
 # 3. Handle README.md
 readme_link="For development rules, see [DEVELOPMENT.md](DEVELOPMENT.md)"
 if [[ ! -f "README.md" ]]; then
   echo "$readme_link" >README.md
-  echo "Created minimal README.md pointing to DEVELOPMENT.md"
+  echo -e "${GREEN}✔  Created minimal README.md pointing to DEVELOPMENT.md${RESET}"
   copied=$((copied + 1))
 else
   if grep -qF "DEVELOPMENT.md" README.md 2>/dev/null; then
-    echo "Note: README.md already references DEVELOPMENT.md → skipping append"
+    echo -e "${BLUE}📝  Note: README.md already references DEVELOPMENT.md → skipping append${RESET}"
   else
     {
       echo "$readme_link"
       echo ""
       cat README.md
     } >README.md.tmp && mv README.md.tmp README.md
-    echo "Prepended DEVELOPMENT.md link to existing README.md"
+    echo -e "${GREEN}✔  Prepended DEVELOPMENT.md link to existing README.md${RESET}"
     appended=$((appended + 1))
   fi
 fi
@@ -294,23 +302,25 @@ for file in "${HEADER_FILES[@]}"; do
   src="$TEMPLATE_DIR/$file"
   dst="./$file"
   [[ ! -f "$dst" ]] && {
-    echo "Note: $dst missing → skipping header"
+    echo -e "${BLUE}📝  Note: $dst missing → skipping header${RESET}"
     continue
   }
   [[ ! -f "$src" ]] && {
-    echo "Warning: $src missing → skipping $dst"
+    echo -e "${YELLOW}⚠️  Warning: $src missing → skipping $dst${RESET}"
     continue
   }
+
   if head -n 40 "$dst" | grep -qF "$(head -n 8 "$src" | grep -v '^\s*$' | head -n 3)"; then
-    echo "Note: Header already in $dst → skipping"
+    echo -e "${BLUE}📝  Note: Header already in $dst → skipping${RESET}"
     continue
   fi
+
   {
     cat "$src"
     tail -n1 "$src" | grep -q '^$' || echo ""
     cat "$dst"
   } >"$dst.tmp" && mv "$dst.tmp" "$dst"
-  echo "Appended header to $dst"
+  echo -e "${GREEN}✔  Appended header to $dst${RESET}"
   appended=$((appended + 1))
 done
 
@@ -323,22 +333,23 @@ if [[ -f "$src_version" ]]; then
     if $FORCE; then
       cp "$src_version" "$dst_version"
       overwritten=$((overwritten + 1))
-      echo "Overwritten existing .rust_template_version (with --force)"
+      echo -e "${GREEN}✔  Overwritten existing .rust_template_version (with --force)${RESET}"
     else
-      echo "Note: .rust_template_version already exists → skipping (use --force to overwrite)"
+      echo -e "${BLUE}📝  Note: .rust_template_version already exists → skipping (use --force to overwrite)${RESET}"
     fi
   else
     cp "$src_version" "$dst_version"
     copied=$((copied + 1))
-    echo "Created .rust_template_version from template"
+    echo -e "${GREEN}✔  Created .rust_template_version from template${RESET}"
   fi
 else
-  echo "Warning: Template .rust_template_version not found — skipped"
+  echo -e "${YELLOW}⚠️  Warning: Template .rust_template_version not found — skipped${RESET}"
 fi
 
+# Final summary
 echo
-echo "Done:"
-echo "  • $copied new file(s) created/copied"
-echo "  • $overwritten file(s) overwritten (with --force)"
-echo "  • $appended file(s) updated (header or README pointer)"
+echo -e "${GREEN}✔  Done:${RESET}"
+echo -e "  • $copied new file(s) created/copied"
+echo -e "  • $overwritten file(s) overwritten (with --force)"
+echo -e "  • $appended file(s) updated (header or README pointer)"
 echo
