@@ -6,9 +6,21 @@ if [[ ! -t 1 ]]; then
   exit 0
 fi
 
+########################################
+# CONFIG
+########################################
 TEMPLATE_FILE=".rust_template_version"
 TEMPLATE_REMOTE="https://github.com/MrCartaaa/rust_template.git"
+TEMPLATE_SSH="git@github.com:MrCartaaa/rust_template.git"
 TEMPLATE_BRANCH="main"
+
+# Detect repo remote URL
+CURRENT_REMOTE_URL=$(git remote get-url origin 2>/dev/null || true)
+
+IS_TEMPLATE_REPO=false
+if [[ "$CURRENT_REMOTE_URL" == "$TEMPLATE_REMOTE" ]] || [[ "$CURRENT_REMOTE_URL" == "$TEMPLATE_SSH" ]]; then
+  IS_TEMPLATE_REPO=true
+fi
 
 # --- Ensure version file exists ---
 if [[ ! -f "$TEMPLATE_FILE" ]]; then
@@ -17,14 +29,43 @@ if [[ ! -f "$TEMPLATE_FILE" ]]; then
   exit 1
 fi
 
-EXPECTED_SHA=$(tr -d ' \n' <"$TEMPLATE_FILE")
+CURRENT_SHA=$(tr -d ' \r\n' <"$TEMPLATE_FILE")
 
-if [[ -z "$EXPECTED_SHA" ]]; then
-  echo "❌ ERROR: $TEMPLATE_FILE is empty."
-  exit 1
+########################################
+# TEMPLATE REPO LOGIC
+########################################
+if [[ "$IS_TEMPLATE_REPO" == true ]]; then
+  # Get previous commit's version file content (if exists)
+  if git show HEAD:"$TEMPLATE_FILE" >/dev/null 2>&1; then
+    PREV_SHA=$(git show HEAD:"$TEMPLATE_FILE" | tr -d ' \r\n')
+  else
+    PREV_SHA=""
+  fi
+
+  # If same → bump version marker
+  if [[ "$CURRENT_SHA" == "$PREV_SHA" ]]; then
+    echo "📝 Bumping template version marker…"
+
+    # Generate a new random SHA/UUID (portable)
+    NEW_SHA=$(uuidgen 2>/dev/null || cat /proc/sys/kernel/random/uuid 2>/dev/null || openssl rand -hex 16)
+
+    echo "$NEW_SHA" >"$TEMPLATE_FILE"
+    git add "$TEMPLATE_FILE"
+
+    echo
+    echo "⚠️ Template version updated to: $NEW_SHA"
+    echo "Please commit again."
+    exit 1
+  fi
+
+  echo "✔ Template version changed — commit allowed"
+  exit 0
 fi
 
-# --- Fetch current SHA of repo-A/main ---
+########################################
+# CLIENT REPO LOGIC
+########################################
+# Fetch latest SHA of template main branch
 REMOTE_SHA=$(git ls-remote "$TEMPLATE_REMOTE" "refs/heads/$TEMPLATE_BRANCH" | awk '{print $1}')
 
 if [[ -z "$REMOTE_SHA" ]]; then
@@ -33,16 +74,16 @@ if [[ -z "$REMOTE_SHA" ]]; then
   exit 1
 fi
 
-# --- Compare ---
-if [[ "$EXPECTED_SHA" != "$REMOTE_SHA" ]]; then
-  echo "❌ Template out of date."
+# Compare
+if [[ "$CURRENT_SHA" != "$REMOTE_SHA" ]]; then
+  echo "❌ Template out of date — commit blocked"
   echo
-  echo "rust_template $TEMPLATE_BRANCH SHA : $REMOTE_SHA"
-  echo "This project expects              : $EXPECTED_SHA"
+  echo "Latest template commit : $REMOTE_SHA"
+  echo "Your project expects   : $CURRENT_SHA"
   echo
-  echo "Update from template by running sync_rust_template.sh, see DEVELOPMENT.md file for more details."
+  echo "Update from template by running sync_rust_template.sh, see DEVELOPMENT.md for details."
   exit 1
 fi
 
-echo "✔ Template version OK ($EXPECTED_SHA)"
+echo "✔ Template version OK ($CURRENT_SHA)"
 exit 0
