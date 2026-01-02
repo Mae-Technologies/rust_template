@@ -25,6 +25,7 @@ cd "$RUST_TEMPLATE_DIR" || {
 TEMPLATE_REMOTE_EXPECTED="https://github.com/MrCartaaa/rust_template.git"
 TEMPLATE_REMOTE_EXPECTED_SSH="git@github.com:MrCartaaa/rust_template.git"
 CURRENT_REMOTE=$(git remote get-url origin 2>/dev/null || true)
+TEMPLATE_BRANCH="main"
 
 if [[ "$CURRENT_REMOTE" != "$TEMPLATE_REMOTE_EXPECTED" && "$CURRENT_REMOTE" != "$TEMPLATE_REMOTE_EXPECTED_SSH" ]]; then
   echo "❌ ERROR: The repo at RUST_TEMPLATE_DIR is not the expected rust_template repository."
