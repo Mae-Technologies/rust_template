@@ -75,16 +75,16 @@ run "rustfmt" cargo fmt -- --check
 ########################################
 # 🧪 Tests (optional fast-paths)
 ########################################
-if [[ -z "${NO_TEST:-}" ]]; then
+if [[ -z "${SKIP_TEST:-}" ]]; then
   run "tests" cargo test
 
-  if [[ -z "${FAST_PUSH:-}" ]]; then
+  if [[ -z "${SKIP_MIRI:-}" ]]; then
     run "miri" cargo miri test
   else
-    warn "⚡ FAST_PUSH set — skipping Miri"
+    warn "⚡ SKIP_MIRI set — skipping Miri"
   fi
 else
-  warn "⚡ NO_TEST set — skipping tests and Miri"
+  warn "⚡ SKIP_TEST set — skipping tests and Miri"
 fi
 
 ########################################
