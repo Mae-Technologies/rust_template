@@ -56,7 +56,7 @@ if [[ "$IS_TEMPLATE_REPO" == true ]]; then
   if [[ "$CURRENT_SHA" == "$PREV_SHA" ]]; then
     info "📝  Bumping template version marker…"
     NEW_SHA=$(uuidgen 2>/dev/null || cat /proc/sys/kernel/random/uuid 2>/dev/null || openssl rand -hex 16)
-    echo "$NEW_SHA" >"$TEMPLATE_FILE"
+    echo "$NEW_SHA" | tr -d '\r' >"$TEMPLATE_FILE"
     git add "$TEMPLATE_FILE"
     ok "⚠️  Template version updated to: $NEW_SHA  "
     info "Included in current commit automatically."
