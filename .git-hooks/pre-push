@@ -46,7 +46,10 @@ if { [[ "$CURRENT_REMOTE_URL" == "$EXPECTED_SSH" ]] || [[ "$CURRENT_REMOTE_URL" 
       # Amend commit with TAG_MARKER appended
       COMMIT_MSG=$(git log -1 --pretty=%B)
       git commit --amend -F <(printf "%s\n\n%s\n" "$COMMIT_MSG" "$TAG_MARKER")
+
       echo "✔ Commit amended with template SHA"
+      echo "⚠️ Commit was rewritten — please run push again"
+      exit 1
     else
       echo "ℹ️ Commit already contains template SHA — skipping amend"
     fi
