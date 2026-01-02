@@ -58,9 +58,9 @@ if [[ "$IS_TEMPLATE_REPO" == true ]]; then
     NEW_SHA=$(uuidgen 2>/dev/null || cat /proc/sys/kernel/random/uuid 2>/dev/null || openssl rand -hex 16)
     echo "$NEW_SHA" >"$TEMPLATE_FILE"
     git add "$TEMPLATE_FILE"
-    warn "⚠️  Template version updated to: $NEW_SHA"
-    info "Please commit again."
-    exit 1
+    ok "⚠️  Template version updated to: $NEW_SHA  "
+    info "Included in current commit automatically."
+    # no exit → commit proceeds
   fi
 
   ok "✔ Template version changed — commit allowed"
@@ -83,13 +83,13 @@ FETCH_PID=$!
 SPINNER="/-\|"
 while kill -0 $FETCH_PID 2>/dev/null; do
   for c in $SPINNER; do
-    printf "\r[⏱] Fetching template %s" "$c"
+    printf "\r[⏱ ] Fetching template %s" "$c"
     sleep 0.1
   done
 done
 wait $FETCH_PID
 
-printf "\r[⏱] Fetch complete ✔        \n"
+printf "\r[⏱ ] Fetch complete ✔        \n"
 
 REMOTE_FILE_SHA=$(git show "$TMP_REF:$TEMPLATE_FILE" 2>/dev/null | tr -d ' \r\n' || true)
 
