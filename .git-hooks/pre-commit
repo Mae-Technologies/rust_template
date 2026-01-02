@@ -62,7 +62,6 @@ if [[ "$IS_TEMPLATE_REPO" == true ]]; then
     info "Included in current commit automatically."
   fi
 
-  ok "✔ Template version changed — commit allowed"
   exit 0
 fi
 
