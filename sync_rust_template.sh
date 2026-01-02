@@ -47,7 +47,7 @@ fi
 
 # Check for clean working tree
 if [[ -n "$(git status --porcelain)" ]]; then
-  echo -e "${RED}❌  ERROR: Working tree in RUST_TEMPLATE_DIR is dirty. Commit or stash changes before syncing.${RESET}"
+  echo -e "${RED}❌  ERROR: Working tree in RUST_TEMPLATE_DIR is dirty. Commit & push or stash changes before syncing.${RESET}"
   git status --short
   cd "$ORIG_DIR"
   exit 1
@@ -66,7 +66,7 @@ if [[ "$LOCAL_SHA" != "$REMOTE_SHA" ]]; then
   echo -e "${RED}❌  ERROR: Local rust_template is not up-to-date with origin/$TEMPLATE_BRANCH.${RESET}"
   echo "   Local SHA : $LOCAL_SHA"
   echo "   Remote SHA: $REMOTE_SHA"
-  echo "   Please pull or reset your template repo before syncing."
+  echo "   Please pull, push or reset your template repo before syncing."
   cd "$ORIG_DIR"
   exit 1
 fi
