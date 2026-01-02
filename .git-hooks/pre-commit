@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Only run in interactive shells
+if [[ ! -t 1 ]]; then
+  exit 0
+fi
+
 TEMPLATE_FILE=".rust_template_version"
 TEMPLATE_REMOTE="https://github.com/MrCartaaa/rust_template.git"
 TEMPLATE_BRANCH="main"
