@@ -7,6 +7,30 @@ if [[ ! -t 1 ]]; then
 fi
 
 ########################################
+# 🎨 Color setup
+########################################
+if command -v tput >/dev/null 2>&1 && [ "$(tput colors)" -ge 8 ]; then
+  RED="$(tput setaf 1)"
+  GREEN="$(tput setaf 2)"
+  YELLOW="$(tput setaf 3)"
+  BLUE="$(tput setaf 4)"
+  BOLD="$(tput bold)"
+  RESET="$(tput sgr0)"
+else
+  RED=""
+  GREEN=""
+  YELLOW=""
+  BLUE=""
+  BOLD=""
+  RESET=""
+fi
+
+info() { echo "${BLUE}$*${RESET}"; }
+ok() { echo "${GREEN}$*${RESET}"; }
+warn() { echo "${YELLOW}$*${RESET}"; }
+err() { echo "${RED}$*${RESET}" >&2; }
+
+########################################
 # CONFIG
 ########################################
 TEMPLATE_FILE=".rust_template_version"
@@ -24,8 +48,8 @@ fi
 
 # --- Ensure version file exists ---
 if [[ ! -f "$TEMPLATE_FILE" ]]; then
-  echo "❌ ERROR: $TEMPLATE_FILE not found."
-  echo "This project must declare which template commit it is based on."
+  err "❌ ERROR: $TEMPLATE_FILE not found."
+  err "This project must declare which template commit it is based on."
   exit 1
 fi
 
@@ -44,7 +68,7 @@ if [[ "$IS_TEMPLATE_REPO" == true ]]; then
 
   # If same → bump version marker
   if [[ "$CURRENT_SHA" == "$PREV_SHA" ]]; then
-    echo "📝 Bumping template version marker…"
+    info "📝 Bumping template version marker…"
 
     # Generate a new random SHA/UUID (portable)
     NEW_SHA=$(uuidgen 2>/dev/null || cat /proc/sys/kernel/random/uuid 2>/dev/null || openssl rand -hex 16)
@@ -53,12 +77,12 @@ if [[ "$IS_TEMPLATE_REPO" == true ]]; then
     git add "$TEMPLATE_FILE"
 
     echo
-    echo "⚠️ Template version updated to: $NEW_SHA"
-    echo "Please commit again."
+    warn "⚠️ Template version updated to: $NEW_SHA"
+    info "Please commit again."
     exit 1
   fi
 
-  echo "✔ Template version changed — commit allowed"
+  ok "✔ Template version changed — commit allowed"
   exit 0
 fi
 
@@ -69,21 +93,21 @@ fi
 REMOTE_SHA=$(git ls-remote "$TEMPLATE_REMOTE" "refs/heads/$TEMPLATE_BRANCH" | awk '{print $1}')
 
 if [[ -z "$REMOTE_SHA" ]]; then
-  echo "❌ ERROR: Could not read remote SHA from:"
-  echo "   $TEMPLATE_REMOTE ($TEMPLATE_BRANCH)"
+  err "❌ ERROR: Could not read remote SHA from:"
+  err "   $TEMPLATE_REMOTE ($TEMPLATE_BRANCH)"
   exit 1
 fi
 
 # Compare
 if [[ "$CURRENT_SHA" != "$REMOTE_SHA" ]]; then
-  echo "❌ Template out of date — commit blocked"
+  err "❌ Template out of date — commit blocked"
   echo
-  echo "Latest template commit : $REMOTE_SHA"
-  echo "Your project expects   : $CURRENT_SHA"
+  info "Latest template commit : $REMOTE_SHA"
+  info "Your project expects   : $CURRENT_SHA"
   echo
-  echo "Update from template by running sync_rust_template.sh, see DEVELOPMENT.md for details."
+  info "Update from template by running sync_rust_template.sh, see DEVELOPMENT.md for details."
   exit 1
 fi
 
-echo "✔ Template version OK ($CURRENT_SHA)"
+ok "✔ Template version OK ($CURRENT_SHA)"
 exit 0
