@@ -3,6 +3,50 @@
 # Copies standard config files + appends header to lib.rs + handles README/DEVELOPMENT.md + workflow file + pre-push hook + .gitignore
 set -euo pipefail
 
+########################################
+# PRE-CHECK: ensure RUST_TEMPLATE_DIR is set and points to the correct repo, and working tree is clean
+########################################
+if [[ -z "${RUST_TEMPLATE_DIR:-}" ]]; then
+  echo "❌ ERROR: RUST_TEMPLATE_DIR environment variable is not set."
+  echo "   Please set RUST_TEMPLATE_DIR to your local rust_template repository."
+  exit 1
+fi
+
+# Save current directory
+ORIG_DIR=$(pwd)
+
+# Go to template directory
+cd "$RUST_TEMPLATE_DIR" || {
+  echo "❌ ERROR: Cannot cd to RUST_TEMPLATE_DIR: $RUST_TEMPLATE_DIR"
+  exit 1
+}
+
+# Validate remote
+TEMPLATE_REMOTE_EXPECTED="https://github.com/MrCartaaa/rust_template.git"
+TEMPLATE_REMOTE_EXPECTED_SSH="git@github.com:MrCartaaa/rust_template.git"
+CURRENT_REMOTE=$(git remote get-url origin 2>/dev/null || true)
+
+if [[ "$CURRENT_REMOTE" != "$TEMPLATE_REMOTE_EXPECTED" && "$CURRENT_REMOTE" != "$TEMPLATE_REMOTE_EXPECTED_SSH" ]]; then
+  echo "❌ ERROR: The repo at RUST_TEMPLATE_DIR is not the expected rust_template repository."
+  echo "   Expected: $TEMPLATE_REMOTE_EXPECTED or $TEMPLATE_REMOTE_EXPECTED_SSH"
+  echo "   Found   : $CURRENT_REMOTE"
+  cd "$ORIG_DIR"
+  exit 1
+fi
+
+# Check for clean working tree
+if [[ -n "$(git status --porcelain)" ]]; then
+  echo "❌ ERROR: Working tree in RUST_TEMPLATE_DIR is dirty. Commit or stash changes before syncing."
+  git status --short
+  cd "$ORIG_DIR"
+  exit 1
+fi
+
+# Return to original directory
+cd "$ORIG_DIR" || exit 1
+
+echo "⏱ Pre-check passed: correct rust_template repo and clean working tree"
+
 TEMPLATE_DIR="$HOME/dev/back_end/rust/rust_template"
 FORCE=false
 
