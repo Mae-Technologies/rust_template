@@ -7,49 +7,37 @@ if [[ ! -t 1 ]]; then
 fi
 
 ########################################
-# 🎨 Color setup
+# Colors
 ########################################
-if command -v tput >/dev/null 2>&1 && [ "$(tput colors)" -ge 8 ]; then
-  RED="$(tput setaf 1)"
-  GREEN="$(tput setaf 2)"
-  YELLOW="$(tput setaf 3)"
-  BLUE="$(tput setaf 4)"
-  BOLD="$(tput bold)"
-  RESET="$(tput sgr0)"
-else
-  RED=""
-  GREEN=""
-  YELLOW=""
-  BLUE=""
-  BOLD=""
-  RESET=""
-fi
+RED="\033[0;31m"
+GREEN="\033[0;32m"
+YELLOW="\033[0;33m"
+BLUE="\033[0;34m"
+BOLD="\033[1m"
+RESET="\033[0m"
 
-info() { echo "${BLUE}$*${RESET}"; }
-ok() { echo "${GREEN}$*${RESET}"; }
-warn() { echo "${YELLOW}$*${RESET}"; }
-err() { echo "${RED}$*${RESET}" >&2; }
+info() { printf "${BLUE}%s${RESET}\n" "$*"; }
+ok() { printf "${GREEN}%s${RESET}\n" "$*"; }
+warn() { printf "${YELLOW}%s${RESET}\n" "$*"; }
+err() { printf "${RED}%s${RESET}\n" "$*" >&2; }
 
 ########################################
-# CONFIG
+# Config
 ########################################
 TEMPLATE_FILE=".rust_template_version"
 TEMPLATE_REMOTE="https://github.com/MrCartaaa/rust_template.git"
 TEMPLATE_SSH="git@github.com:MrCartaaa/rust_template.git"
 TEMPLATE_BRANCH="main"
 
-# Detect repo remote URL
 CURRENT_REMOTE_URL=$(git remote get-url origin 2>/dev/null || true)
-
 IS_TEMPLATE_REPO=false
 if [[ "$CURRENT_REMOTE_URL" == "$TEMPLATE_REMOTE" ]] || [[ "$CURRENT_REMOTE_URL" == "$TEMPLATE_SSH" ]]; then
   IS_TEMPLATE_REPO=true
 fi
 
-# --- Ensure version file exists ---
+# Ensure version file exists
 if [[ ! -f "$TEMPLATE_FILE" ]]; then
   err "❌ ERROR: $TEMPLATE_FILE not found."
-  err "This project must declare which template commit it is based on."
   exit 1
 fi
 
@@ -59,24 +47,17 @@ CURRENT_SHA=$(tr -d ' \r\n' <"$TEMPLATE_FILE")
 # TEMPLATE REPO LOGIC
 ########################################
 if [[ "$IS_TEMPLATE_REPO" == true ]]; then
-  # Get previous commit's version file content (if exists)
   if git show HEAD:"$TEMPLATE_FILE" >/dev/null 2>&1; then
     PREV_SHA=$(git show HEAD:"$TEMPLATE_FILE" | tr -d ' \r\n')
   else
     PREV_SHA=""
   fi
 
-  # If same → bump version marker
   if [[ "$CURRENT_SHA" == "$PREV_SHA" ]]; then
     info "📝 Bumping template version marker…"
-
-    # Generate a new random SHA/UUID (portable)
     NEW_SHA=$(uuidgen 2>/dev/null || cat /proc/sys/kernel/random/uuid 2>/dev/null || openssl rand -hex 16)
-
     echo "$NEW_SHA" >"$TEMPLATE_FILE"
     git add "$TEMPLATE_FILE"
-
-    echo
     warn "⚠️ Template version updated to: $NEW_SHA"
     info "Please commit again."
     exit 1
@@ -89,23 +70,42 @@ fi
 ########################################
 # CLIENT REPO LOGIC
 ########################################
-# Fetch latest SHA of template main branch
-REMOTE_SHA=$(git ls-remote "$TEMPLATE_REMOTE" "refs/heads/$TEMPLATE_BRANCH" | awk '{print $1}')
+info "[⏱] Checking remote for rust template version"
 
-if [[ -z "$REMOTE_SHA" ]]; then
-  err "❌ ERROR: Could not read remote SHA from:"
-  err "   $TEMPLATE_REMOTE ($TEMPLATE_BRANCH)"
+TMP_REF="refs/remotes/_template_tmp"
+
+# Spinner in background while fetch runs
+(
+  git fetch --quiet "$TEMPLATE_REMOTE" "$TEMPLATE_BRANCH:$TMP_REF"
+) &
+FETCH_PID=$!
+
+SPINNER="/-\|"
+while kill -0 $FETCH_PID 2>/dev/null; do
+  for c in $SPINNER; do
+    printf "\r[⏱] Fetching template %s" "$c"
+    sleep 0.1
+  done
+done
+wait $FETCH_PID
+
+printf "\r[⏱] Fetch complete ✔        \n"
+
+REMOTE_FILE_SHA=$(git show "$TMP_REF:$TEMPLATE_FILE" 2>/dev/null | tr -d ' \r\n' || true)
+
+# Cleanup temporary ref
+git update-ref -d "$TMP_REF" >/dev/null 2>&1 || true
+
+if [[ -z "$REMOTE_FILE_SHA" ]]; then
+  err "❌ ERROR: Could not read $TEMPLATE_FILE from template remote $TEMPLATE_BRANCH"
   exit 1
 fi
 
-# Compare
-if [[ "$CURRENT_SHA" != "$REMOTE_SHA" ]]; then
-  err "❌ Template out of date — commit blocked"
-  echo
-  info "Latest template commit : $REMOTE_SHA"
-  info "Your project expects   : $CURRENT_SHA"
-  echo
-  info "Update from template by running sync_rust_template.sh, see DEVELOPMENT.md for details."
+if [[ "$CURRENT_SHA" != "$REMOTE_FILE_SHA" ]]; then
+  err "❌ Template version mismatch — commit blocked"
+  info "Latest template .rust_template_version : $REMOTE_FILE_SHA"
+  info "Your project expects                  : $CURRENT_SHA"
+  info "Run sync_rust_template.sh to update before committing."
   exit 1
 fi
 
