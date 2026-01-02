@@ -37,8 +37,8 @@ if [[ ! -t 1 ]]; then
 fi
 
 # Global bypass
-if [[ -n "${SKIP_RUST_GATE:-}" ]]; then
-  warn "⚠️  SKIP_RUST_GATE set — skipping Rust quality gate"
+if [[ -n "${SKIP_GUARD:-}" ]]; then
+  warn "⚠️  SKIP_GUARD set — skipping Rust quality gate"
   exit 0
 fi
 
@@ -54,7 +54,7 @@ for f in "${required_files[@]}"; do
   [[ -f "$f" ]] || exit 0
 done
 
-info "🦀 Rust quality gate detected — running pre-push checks"
+info "🦀  Rust quality gate detected — running pre-push checks"
 echo
 
 run() {
@@ -95,4 +95,4 @@ run "cargo audit" cargo audit
 run "cargo deny" cargo deny check
 
 echo
-ok "✅ All Rust checks passed — continuing push"
+ok "✅  All Rust checks passed — continuing push"
