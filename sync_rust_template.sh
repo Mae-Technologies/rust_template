@@ -4,7 +4,7 @@
 set -euo pipefail
 
 ########################################
-# PRE-CHECK: ensure RUST_TEMPLATE_DIR is set and points to the correct repo, and working tree is clean
+# PRE-CHECK: ensure RUST_TEMPLATE_DIR is set, points to the correct repo, clean, and up-to-date
 ########################################
 if [[ -z "${RUST_TEMPLATE_DIR:-}" ]]; then
   echo "❌ ERROR: RUST_TEMPLATE_DIR environment variable is not set."
@@ -42,10 +42,26 @@ if [[ -n "$(git status --porcelain)" ]]; then
   exit 1
 fi
 
+# Fetch latest remote state quietly
+git fetch --quiet origin "$TEMPLATE_BRANCH"
+
+# Ensure local HEAD == remote branch SHA
+LOCAL_SHA=$(git rev-parse HEAD)
+REMOTE_SHA=$(git rev-parse "origin/$TEMPLATE_BRANCH")
+
+if [[ "$LOCAL_SHA" != "$REMOTE_SHA" ]]; then
+  echo "❌ ERROR: Local rust_template is not up-to-date with origin/$TEMPLATE_BRANCH."
+  echo "   Local SHA : $LOCAL_SHA"
+  echo "   Remote SHA: $REMOTE_SHA"
+  echo "   Please pull or reset your template repo before syncing."
+  cd "$ORIG_DIR"
+  exit 1
+fi
+
 # Return to original directory
 cd "$ORIG_DIR" || exit 1
 
-echo "⏱ Pre-check passed: correct rust_template repo and clean working tree"
+echo "⏱ Pre-check passed: correct rust_template repo, clean working tree, and up-to-date with remote"
 
 TEMPLATE_DIR="$HOME/dev/back_end/rust/rust_template"
 FORCE=false
