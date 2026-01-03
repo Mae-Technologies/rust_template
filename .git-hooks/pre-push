@@ -42,6 +42,27 @@ if [[ -n "${SKIP_GUARD:-}" ]]; then
   exit 0
 fi
 
+# Only run checks when pushing to main (or master)
+protected_branches=("refs/heads/main" "refs/heads/master")
+
+run_checks=false
+while read -r local_ref local_sha remote_ref remote_sha; do
+  for branch in "${protected_branches[@]}"; do
+    if [[ "$remote_ref" == "$branch" ]]; then
+      run_checks=true
+      break 2 # break out of both loops once we find a match
+    fi
+  done
+done
+
+if [[ "$run_checks" != "true" ]]; then
+  # Optional: uncomment if you want feedback when skipping
+  info "Not pushing to main/master → skipping Rust quality gate"
+  exit 0
+fi
+
+# If we reach here → proceed with Rust detection and checks
+
 # Detect Rust project by policy files
 required_files=(
   clippy.toml

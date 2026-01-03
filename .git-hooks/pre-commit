@@ -6,6 +6,19 @@ if [[ ! -t 1 ]]; then
   exit 0
 fi
 
+# ────────────────────────────────────────────────
+# Only run logic when on main or master
+# ────────────────────────────────────────────────
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
+
+if [[ "$CURRENT_BRANCH" != "main" && "$CURRENT_BRANCH" != "master" ]]; then
+  # Optional: show a quiet message (comment out if you want zero output on feature branches)
+  info "Not on main/master (on $CURRENT_BRANCH) → skipping pre-commit check"
+  exit 0
+fi
+
+# If we reach here → proceed with template or client logic
+
 ########################################
 # Colors
 ########################################
