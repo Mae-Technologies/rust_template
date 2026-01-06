@@ -297,6 +297,13 @@ else
   fi
 fi
 
+# adding empty exceptions file for cargo deny
+if [[ !-f "deny.exceptions.toml" ]]; then
+  echo "exceptions = []" > deny.exceptions.toml
+  echo -e "${GREEN}✔  Created minimal deny.exceptions.toml file."
+  copied=$((copied +1))
+fi
+
 # 4. Append header to lib.rs (etc.)
 for file in "${HEADER_FILES[@]}"; do
   src="$TEMPLATE_DIR/$file"

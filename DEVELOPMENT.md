@@ -93,7 +93,7 @@ The `sync-rust-template` script copies `tests/common.rs` from the template → `
 sync-rust-template --force   # creates / overwrites tests/must.rs
 ```
 
-### cargo-deny (`deny.toml`)
+### cargo-deny (`deny.toml` & `deny.exceptions.toml`)
 
 Enforces workspace-wide dependency policy:
 
@@ -237,7 +237,13 @@ All new dependencies must pass `cargo deny check`. Update `Cargo.toml` and run:
 cargo deny check
 ```
 
-Also update the Git source allowlist in `deny.toml` if using private Git dependencies.
+If there are unique usecases to allow licenses from specific crates, add lines to your `./deny.exceptions.toml` file, ie:
+```toml
+exceptions = [
+{crate = "atomic-wait", allow = ["BSD-2-Clause"]},
+{crate = "unicode-ident", allow = ["MIT", "Apache-2.0", "Unicode-3.0"]}
+]
+```
 
 ## Local Checks
 
