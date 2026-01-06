@@ -1,8 +1,8 @@
 # Rust Development Rules
 
-focus on code quality, safety, security, and reliability.
+Focus on code quality, safety, security, and reliability.
 
-This project enforces Rust best practices using nightly tooling, aggressive linting, undefined behavior detection, dependency auditing, and comprehensive CI.
+This project enforces Rust best practices using nightly tooling, aggressive linting, undefined behavior detection, dependency auditing, comprehensive CI, and Licensing.
 
 ## Key Features
 
@@ -16,6 +16,8 @@ This project enforces Rust best practices using nightly tooling, aggressive lint
 - **Git pre-push hook** that automatically runs formatting, tests, Miri, Clippy, audit, and deny checks before pushing commits
 - **Git pre-commit hook** that checks for latest rust_template changes
 - **Comprehensive .gitignore** to exclude build artifacts, temporary files, environment files, Docker outputs, and IDE/editor settings
+- **License support** via `--private <name>` flag (creates proprietary LICENSE file) **or** `--name <name>` flag (creates MIT LICENSE file)
+  - optionally set `RUST_OWNER` to use as the `<name>`
 
 ## Tooling Details
 
@@ -84,25 +86,15 @@ Safe, Clippy-compliant unwrap helpers **exclusively for tests**.
   - Avoid triggering `unwrap_used` / `expect_used` lints
   - Produce clear failure messages
 
-#### How It’s Added
-The `sync-rust-template` script copies `tests/common.rs` from the template → `tests/must.rs` in your project:
-- Skips if `must.rs` already exists
-- Overwrites with `--force`
-
-```bash
-sync-rust-template --force   # creates / overwrites tests/must.rs
-```
-
 ### cargo-deny (`deny.toml` & `deny.exceptions.toml`)
 
 Enforces workspace-wide dependency policy:
 
-- Allowed licenses: `MIT`, `Apache-2.0`, `BSD-3-Clause`
-- Forbidden licenses: `GPL-2.0`, `GPL-3.0`, `AGPL-3.0`
+- Allowed licenses: `MIT`, `Apache-2.0`, `BSD-3-Clause`, `ISC`, `MPL-2.0`
 - Blocks known vulnerabilities and yanked crates
 - Restricts sources to `crates.io` and your GitHub repositories
 
-More info: https://github.com/embarkstudios/cargo-deny
+[read the `cargo-deny` docs](https://embarkstudios.github.io/cargo-deny/checks/bans/cfg.html)
 
 ### GitHub Actions CI (`.github/workflows/rust_ci.yaml`)
 
@@ -127,6 +119,7 @@ This project includes a pre-push hook to enforce Rust quality checks **before an
 
   * `SKIP_RUST_GATE=1` — skips all Rust checks globally
   * `FAST_PUSH=1` — skips Miri tests but still runs other checks
+  * `SKIP_TEST=1` - skips all tests
 * **Requirements**: Only runs if all of these files exist in your Rust project:
 
   * `clippy.toml`
@@ -217,12 +210,55 @@ docker-container-*
 *.tmp
 ```
 
+### Licensing (`--private <name>` or `--name <name>`)
+
+The `--private` flag allows you to generate a proprietary LICENSE file for your project. This is useful when your Rust crate or program is **not intended for public or open-source use**.
+
+The `--name` flag allows you to generate a MIT LICENSE file for your project.
+
+#### Usage
+
+```bash
+# Create a LICENSE file for yourself
+sync-rust-template --private "Your Name"
+
+# Or combine with --force
+sync-rust-template --force --private "Your Name"
+
+# Set your Environment
+echo 'export RUST_OWNER="your name"' >> /.zshrc
+source /.zshrc
+
+sync-rust-template --private # --name
+```
+
+#### Behavior
+
+* Creates a `LICENSE` file in the current directory.
+* Includes the **current year** and the **provided name**.
+* Marks the project as **all rights reserved / proprietary** or **MIT**.
+* updates `Cargo.toml` file.
+* Does **not overwrite** an existing LICENSE unless combined with `--force`.
+
+#### Example Private LICENSE Content
+
+```
+Copyright (c) 2026 Your Name
+
+All rights reserved.
+
+This software is proprietary and may not be used, copied, modified,
+or distributed without explicit permission from Your Name.
+```
+
 ## Getting Started
 
 ```bash
-# Create a repo from this template on GitHub, then:
-git clone https://github.com/yourusername/your-project.git
+# Create a new project, then:
+cargo new your-project
 cd your-project
+git init
+sync-rust-template --name <your-name>
 
 # Toolchain auto-selected via rust-toolchain.toml
 cargo build
@@ -237,7 +273,8 @@ All new dependencies must pass `cargo deny check`. Update `Cargo.toml` and run:
 cargo deny check
 ```
 
-If there are unique usecases to allow licenses from specific crates, add lines to your `./deny.exceptions.toml` file, ie:
+If there are unique usecases to allow licenses from specific crates, add lines to your `./deny.exceptions.toml` file.
+#### Example:
 ```toml
 exceptions = [
 {crate = "atomic-wait", allow = ["BSD-2-Clause"]},
@@ -285,6 +322,12 @@ When run from the root of a Rust project (must contain `Cargo.toml`), it:
   - If exists → prepends the above link (only once, idempotent check)
 
 - Appends header to `src/lib.rs` from template (skips if header already present via content check)
+
+- licensing:
+  - Using `--private "Your Name"` generates a LICENSE file with current year and your name
+    - Marks the project as proprietary (all rights reserved)
+  - Using `--name "Your Name"` generates an MIT file with current year and your name
+  - Skips creation if LICENSE already exists unless --force is used
 
 Safety features:
 - Fails immediately if not in a Rust project (no `Cargo.toml`)
@@ -355,6 +398,10 @@ sync-rust-template --force
 # or
 sync-rust-template -f
 
+# Add a private license.
+# Use this if your project is explicitly private and should not be shared (ie - proprietary)
+sync-rust-template --private your_name
+
 # Show help
 sync-rust-template --help
 ```
@@ -412,6 +459,8 @@ Troubleshooting
 - `command not found` → add script dir to `$PATH` and `source ~/.zshrc`
 - `Not a Rust project` → run from directory containing `Cargo.toml`
 - `Files already exist` → use `--force` flag
+-  `No --private, --name, or RUST_OWNER environment variable provided.` → set the `RUST_OWNER` in your environment, use `--name <your/company name>` or use `--private <your/company name>`
+    - with `RUST_OWNER` set, `--name` defaults to `MIT` license, use `--private` for proprietary projects
 
 After Syncing
 
