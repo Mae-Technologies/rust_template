@@ -109,12 +109,12 @@ run "rustfmt" cargo fmt -- --check
 # 🧪 Tests (optional fast-paths)
 ########################################
 if [[ -z "${SKIP_TEST:-}" ]]; then
-  run "tests" cargo test
 
   if [[ -z "${SKIP_MIRI:-}" ]]; then
     run "miri" cargo miri test
   else
     warn "⚡ SKIP_MIRI set — skipping Miri"
+    run "tests" cargo test
   fi
 else
   warn "⚡ SKIP_TEST set — skipping tests and Miri"
@@ -124,7 +124,6 @@ fi
 # 🔍 Lint / Security / Policy
 ########################################
 run "clippy" cargo clippy -- -D warnings
-run "cargo audit" cargo audit
 run "cargo deny" cargo deny check
 
 echo

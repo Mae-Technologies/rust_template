@@ -120,5 +120,26 @@ if [[ "$CURRENT_SHA" != "$REMOTE_FILE_SHA" ]]; then
   exit 1
 fi
 
+dir="${RUST_TEMPLATE_DIR:-}"
+if [[ -z "$dir" ]]; then
+  err "❌ ERROR: RUST_TEMPLATE_DIR is not set"
+  exit 1
+fi
+if [[ ! -d "$dir" ]]; then
+  err "❌ ERROR: RUST_TEMPLATE_DIR does not exist: $dir"
+  exit 1
+fi
+if [[ ! -d "$dir/.git" ]]; then
+  err "❌ ERROR: RUST_TEMPLATE_DIR is not a git repo: $dir"
+  exit 1
+fi
+
+# Check status (includes staged, unstaged, untracked)
+if [[ -n "$(git -C "$dir" status --porcelain)" ]]; then
+  err "❌ ERROR: template working tree is not clean: $dir"
+  info "   - commit and push your changes in the rust_template project before continuing"
+  exit 1
+fi
+
 ok "✔ Template version OK ($CURRENT_SHA)"
 exit 0

@@ -95,7 +95,7 @@ fi
 ########################################
 # PRE-CHECK: ensure RUST_TEMPLATE_DIR is set, points to the correct repo, clean, and up-to-date
 ########################################
-if [[ ! $TEST ]]; then
+if ! $TEST; then
   if [[ -z "${RUST_TEMPLATE_DIR:-}" ]]; then
     echo -e "${RED}❌  ERROR: RUST_TEMPLATE_DIR environment variable is not set.${RESET}"
     echo "   Please set RUST_TEMPLATE_DIR to your local rust_template repository."
@@ -388,10 +388,12 @@ else
 fi
 
 # adding empty exceptions file for cargo deny
-if [[ ! $FORCE || -f "deny.exceptions.toml" ]]; then
+if [[ ! -f "deny.exceptions.toml" ]]; then
   echo "exceptions = []" >deny.exceptions.toml
   echo -e "${GREEN}✔  Created minimal deny.exceptions.toml file."
   copied=$((copied + 1))
+else
+  echo -e "${BLUE}📝  Note: deny.excemptions.toml file already exists → skipping append${RESET}"
 fi
 
 # 4. Append header to lib.rs (etc.)
