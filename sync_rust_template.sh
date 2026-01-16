@@ -313,13 +313,22 @@ fi
 
 # 2b. Handle tests/common.rs → tests/must.rs
 src_common="$RUST_TEMPLATE_DIR/tests/common.rs"
-dst_unwrap="./tests/must.rs"
+dst_unwrap="./tests/common/must.rs"
+dst_mod="./tests/common/mod.rs"
 
 if [[ -f "$src_common" ]]; then
+  # Ensure destination directories exist
   mkdir -p "./tests"
+  mkdir -p "./tests/common"
+  touch "./tests/common/mod.rs"
+
   if [[ -f "$dst_unwrap" ]]; then
     if $FORCE; then
       cp "$src_common" "$dst_unwrap"
+      if ! grep -qxF "pub mod must;" "$dst_mod"; then
+        echo -e "${GREEN}✔  appending existing $dst_mod to inlude must mod (with --force)${RESET}"
+        echo "pub mod must;" >>"$dst_mod"
+      fi
       overwritten=$((overwritten + 1))
       echo -e "${GREEN}✔  Overwritten existing $dst_unwrap (with --force)${RESET}"
     else
@@ -327,11 +336,35 @@ if [[ -f "$src_common" ]]; then
     fi
   else
     cp "$src_common" "$dst_unwrap"
-    copied=$((copied + 1))
+    echo "pub mod must;" >>"$dst_mod"
+    copied=$((copied + 2))
     echo -e "${GREEN}✔  Created $dst_unwrap from template common.rs${RESET}"
   fi
 else
   echo -e "${YELLOW}⚠️  Warning: Template tests/common.rs not found — skipping must.rs${RESET}"
+fi
+
+# add common to tests
+common_decl="pub mod common;"
+lib="./tests/lib.rs"
+main="./tests/main.rs"
+
+if $FORCE; then
+  if [[ -f "$lib" ]]; then
+    if ! grep -qxF "$common_decl" "$lib"; then
+      echo -e "${GREEN}✔  appending existing $lib to include common directory (with --force)${RESET}"
+      echo "" >>"$lib"
+      echo "$common_decl" >>"$lib"
+    fi
+  elif [[ -f "$main" ]]; then
+    if ! grep -qxF "$common_decl" "$main"; then
+      echo "" >>"$main"
+      echo "$common_decl" >>"$main"
+      echo -e "${GREEN}✔  appending existing $main to include common directory (with --force)${RESET}"
+    fi
+  fi
+else
+  echo -e "${BLUE}📝  Note: skipping common/must.rs (use --force to overwrite)${RESET}"
 fi
 
 # 3. Handle README.md
