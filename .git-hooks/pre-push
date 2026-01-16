@@ -42,6 +42,18 @@ if [[ -n "${SKIP_GUARD:-}" ]]; then
   exit 0
 fi
 
+# Only allow pushing over ssh
+remote_name="$1"
+remote_url="$2"
+
+case "$remote_url" in
+https://* | http://*)
+  echo "ERROR: HTTPS push blocked. Use SSH remote URLs (git@...)." >&2
+  echo "Remote: $remote_name  URL: $remote_url" >&2
+  exit 1
+  ;;
+esac
+
 # Only run checks when pushing to main (or master)
 protected_branches=("refs/heads/main" "refs/heads/master")
 
