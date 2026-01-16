@@ -109,13 +109,8 @@ run "rustfmt" cargo fmt -- --check
 # 🧪 Tests (optional fast-paths)
 ########################################
 if [[ -z "${SKIP_TEST:-}" ]]; then
-
-  if [[ -z "${SKIP_MIRI:-}" ]]; then
-    run "miri" cargo miri test
-  else
-    warn "⚡ SKIP_MIRI set — skipping Miri"
-    run "tests" cargo test
-  fi
+  run "tests" .ci_tests.sh
+  ok "✔  Tests completed successfully"
 else
   warn "⚡ SKIP_TEST set — skipping tests and Miri"
 fi
