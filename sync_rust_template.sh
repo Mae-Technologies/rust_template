@@ -367,6 +367,25 @@ else
   echo -e "${BLUE}📝  Note: skipping common/must.rs (use --force to overwrite)${RESET}"
 fi
 
+ci_env=".ci/ci_tests.env"
+ci_sh=".ci/ci_tests.sh"
+mkdir -p .ci
+
+if [[ ! -f "$ci_env" ]]; then
+  cp "$RUST_TEMPLATE_DIR/$ci_sh" "$ci_sh"
+  copied=$((copied + 1))
+  echo -e "${GREEN}✔  Created ci environment file${RESET}"
+else
+  echo -e "${BLUE}📝  Note: ${ci_env} already exists → skipping append${RESET}"
+fi
+if [[ ! -f "$ci_env" ]]; then
+  echo "TEST_WITH=cargo" >"$ci_env"
+  copied=$((copied + 1))
+  echo -e "${GREEN}✔  Created ci environment file${RESET}"
+else
+  echo -e "${BLUE}📝  Note: ${ci_env} already exists → skipping append${RESET}"
+fi
+
 # 3. Handle README.md
 readme_link="For development rules, see [DEVELOPMENT.md](DEVELOPMENT.md)"
 if [[ ! -f "README.md" ]]; then
