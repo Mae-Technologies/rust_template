@@ -119,10 +119,8 @@ if [[ ! -x "$ci_tests" ]]; then
   chmod +x "$ci_tests"
 fi
 
-"$ci_tests"
-
 if [[ -z "${SKIP_TEST:-}" ]]; then
-  run "tests" .ci_tests.sh
+  run "tests" "$ci_tests"
   ok "✔  Tests completed successfully"
 else
   warn "⚡ SKIP_TEST set — skipping tests and Miri"
