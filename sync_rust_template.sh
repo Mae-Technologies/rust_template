@@ -367,23 +367,43 @@ else
   echo -e "${BLUE}📝  Note: skipping common/must.rs (use --force to overwrite)${RESET}"
 fi
 
+# moving over testing CI files so the developer can define how hooks and pre-pushes run tests
 ci_env=".ci/ci_tests.env"
 ci_sh=".ci/ci_tests.sh"
 mkdir -p .ci
 
-if [[ ! -f "$ci_env" ]]; then
+if [[ ! -f "$ci_sh" ]]; then
   cp "$RUST_TEMPLATE_DIR/$ci_sh" "$ci_sh"
   copied=$((copied + 1))
   echo -e "${GREEN}✔  Created ci environment file${RESET}"
 else
-  echo -e "${BLUE}📝  Note: ${ci_env} already exists → skipping append${RESET}"
+  if $FORCE; then
+    cp "$RUST_TEMPLATE_DIR/$ci_sh" "$ci_sh"
+    chmod +x "$ci_sh"
+    overwritten=$((overwritten + 1))
+    echo -e "${GREEN}✔  Overwritten existing ci script: $ci_sh (with --force)${RESET}"
+  else
+    echo -e "${BLUE}📝  Note: ${ci_env} already exists → skipping append (use --force to overwrite)${RESET}"
+  fi
 fi
+
 if [[ ! -f "$ci_env" ]]; then
   echo "TEST_WITH=cargo" >"$ci_env"
   copied=$((copied + 1))
   echo -e "${GREEN}✔  Created ci environment file${RESET}"
 else
   echo -e "${BLUE}📝  Note: ${ci_env} already exists → skipping append${RESET}"
+fi
+
+# creating .cargo/config.toml file
+cargo_conf=".cargo/config.toml"
+mkdir -p ".cargo"
+if [[ ! -f "$cargo_conf" ]]; then
+  touch "$cargo_conf"
+  copied=$((copied + 1))
+  echo -e "${GREEN}✔  Created cargo config file${RESET}"
+else
+  echo -e "${BLUE}📝  Note: ${cargo_conf} already exists → skipping append${RESET}"
 fi
 
 # 3. Handle README.md
