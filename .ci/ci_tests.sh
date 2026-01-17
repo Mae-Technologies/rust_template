@@ -14,8 +14,9 @@ set -euo pipefail
 # - unknown TEST_WITH exits 1
 # ────────────────────────────────────────────────
 
-ENV_FILE=".ci_tests.env"
-TEST_WITH="cargo"
+repo_root="$(git rev-parse --show-toplevel)"
+ENV_FILE="$repo_root/.ci/ci_tests.env"
+TEST_WITH=
 
 if [[ -f "$ENV_FILE" ]]; then
   val="$(grep -E '^[[:space:]]*TEST_WITH=' "$ENV_FILE" |
@@ -43,7 +44,7 @@ nothing)
   exit 0
   ;;
 *)
-  echo "❌ ERROR: Unknown TEST_WITH='$TEST_WITH' (expected: miri|cargo|nextest|nothing)" >&2
+  echo "❌ ERROR: Unknown environemt, TEST_WITH='$TEST_WITH' (expected: miri|cargo|nextest|nothing)" >&2
   exit 1
   ;;
 esac
