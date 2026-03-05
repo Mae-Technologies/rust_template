@@ -395,15 +395,15 @@ else
   echo -e "${BLUE}📝  Note: ${ci_env} already exists → skipping append${RESET}"
 fi
 
-# creating .cargo/config.toml file
+# creating/updating .cargo/config.toml with git-fetch-with-cli
 cargo_conf=".cargo/config.toml"
 mkdir -p ".cargo"
-if [[ ! -f "$cargo_conf" ]]; then
-  touch "$cargo_conf"
+if ! grep -q 'git-fetch-with-cli' "$cargo_conf" 2>/dev/null; then
+  printf '[net]\ngit-fetch-with-cli = true\n' >> "$cargo_conf"
   copied=$((copied + 1))
-  echo -e "${GREEN}✔  Created cargo config file${RESET}"
+  echo -e "${GREEN}✔  Wrote git-fetch-with-cli to ${cargo_conf}${RESET}"
 else
-  echo -e "${BLUE}📝  Note: ${cargo_conf} already exists → skipping append${RESET}"
+  echo -e "${BLUE}📝  Note: ${cargo_conf} already has git-fetch-with-cli → skipping${RESET}"
 fi
 
 # 3. Handle README.md
