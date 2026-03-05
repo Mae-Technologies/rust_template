@@ -583,6 +583,28 @@ else
     ' "$CARGO_FILE" >"${CARGO_FILE}.tmp" && mv "${CARGO_FILE}.tmp" "$CARGO_FILE"
   echo -e "${GREEN}✔  Added license = $LICENSE_TYPE to Cargo.toml under [package]${RESET}"
 fi
+# Ensure [lints.clippy] is present in Cargo.toml
+ensure_clippy_lints() {
+  local cargo_toml="$1/Cargo.toml"
+  if [[ ! -f "$cargo_toml" ]]; then
+    echo -e "${YELLOW}⚠️  WARNING: $cargo_toml not found, skipping lints enforcement${RESET}"
+    return
+  fi
+
+  if grep -q '^\[lints\.clippy\]' "$cargo_toml" 2>/dev/null; then
+    echo -e "${BLUE}📝  Note: [lints.clippy] already present in $cargo_toml${RESET}"
+    return
+  fi
+
+  echo "" >> "$cargo_toml"
+  echo "[lints.clippy]" >> "$cargo_toml"
+  echo 'unwrap_used = "deny"' >> "$cargo_toml"
+  echo 'expect_used = "deny"' >> "$cargo_toml"
+  echo -e "${GREEN}✔  Added [lints.clippy] to $cargo_toml${RESET}"
+}
+
+ensure_clippy_lints "$(pwd)"
+
 # Final summary
 echo
 echo -e "${GREEN}✔  Done:${RESET}"
