@@ -73,18 +73,12 @@ cargo +nightly miri test --all-targets --all-features
 - Documentation & usage: https://github.com/rust-lang/miri/blob/master/README.md
 - Undefined Behavior in Rust: https://doc.rust-lang.org/reference/behavior-considered-undefined.html
 
-### Test Utilities (`tests/must.rs`)
+### Test Utilities (`mae::testing`)
 
-Safe, Clippy-compliant unwrap helpers **exclusively for tests**.
+The template no longer ships a local `tests/must.rs` helper.
 
-#### Purpose
-- Production code is strictly forbidden from using `unwrap()` or `expect()` (enforced via `clippy.toml` + `disallowed_methods`)
-- Tests often need to assert that a value *must* be present when logic guarantees it
-- This module provides ergonomic, panic-on-failure helpers that:
-  - Are gated behind `#[cfg(test)]`
-  - Use `#[track_caller]` for accurate panic location reporting
-  - Avoid triggering `unwrap_used` / `expect_used` lints
-  - Produce clear failure messages
+Use the test helper utilities provided by the `mae` library (`mae::testing`) instead.
+This keeps test helper behavior centralized and avoids template-specific duplication.
 
 ### cargo-deny (`deny.toml` & `deny.exceptions.toml`)
 
