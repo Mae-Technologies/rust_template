@@ -50,9 +50,13 @@ https://* | http://*)
 esac
 
 # Drain stdin (required by git pre-push hook protocol)
-while read -r local_ref local_sha remote_ref remote_sha; do
-  : # checks run on every branch — no branch filtering
-done
+# Guard: only drain when stdin is a pipe (not a terminal), so the script
+# doesn't hang when a developer runs it directly from the command line.
+if [[ ! -t 0 ]]; then
+  while read -r local_ref local_sha remote_ref remote_sha; do
+    : # checks run on every branch — no branch filtering
+  done
+fi
 
 # Detect Rust project by policy files
 required_files=(
