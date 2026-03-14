@@ -87,11 +87,11 @@ run "rustfmt" cargo fmt -- --check
 ########################################
 # 🧪 Tests (optional fast-paths)
 ########################################
-if [[ -z "${SKIP_TEST:-}" ]]; then
+if [[ -z "${SKIP_TESTS:-}" ]]; then
   run "tests" bash "$(dirname "$0")/int-test.sh"
   ok "✔  Tests completed successfully"
 else
-  warn "⚡ SKIP_TEST set — skipping tests"
+  warn "⚡ SKIP_TESTS set — skipping tests"
 fi
 
 ########################################
