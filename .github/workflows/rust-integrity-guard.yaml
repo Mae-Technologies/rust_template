@@ -1,4 +1,4 @@
-name: Rust Integrity Guard
+name: rust-integrity-guard
 
 on:
   push:
@@ -12,7 +12,7 @@ on:
 
 jobs:
   nightly-ci:
-    name: Nightly Clippy + Miri + Deny + Fmt + Unsafe Checks
+    name: rust-integrity
     runs-on: ubuntu-latest
 
     steps:

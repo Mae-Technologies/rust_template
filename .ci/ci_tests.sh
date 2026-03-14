@@ -7,7 +7,7 @@ set -euo pipefail
 #   TEST_WITH=cargo    -> cargo test
 #   TEST_WITH=nextest  -> cargo nextest run
 #   TEST_WITH=nothing  -> skip tests
-#   (missing file/key defaults to cargo)
+#   (missing file/key defaults to nextest)
 #
 # Exit code propagates to caller:
 # - test failures return non-zero and this script exits non-zero
@@ -16,7 +16,7 @@ set -euo pipefail
 
 repo_root="$(git rev-parse --show-toplevel)"
 ENV_FILE="$repo_root/.ci/ci_tests.env"
-TEST_WITH=
+TEST_WITH=nextest
 
 if [[ -f "$ENV_FILE" ]]; then
   val="$(grep -E '^[[:space:]]*TEST_WITH=' "$ENV_FILE" |
