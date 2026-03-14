@@ -344,6 +344,12 @@ else
   echo -e "${YELLOW}⚠️  Warning: Template .ci/ directory not found — skipped${RESET}"
 fi
 
+# Cleanup: remove deprecated .ci/ci_tests.env from target if it exists
+if [[ -f ".ci/ci_tests.env" ]]; then
+  rm -f ".ci/ci_tests.env"
+  echo -e "${GREEN}✔  Removed deprecated .ci/ci_tests.env${RESET}"
+fi
+
 # Cleanup: remove deprecated .ci/ci_tests.sh from target if it exists
 if [[ -f ".ci/ci_tests.sh" ]]; then
   rm -f ".ci/ci_tests.sh"
