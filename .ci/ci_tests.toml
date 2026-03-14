@@ -1,0 +1,9 @@
+# CI test runner configuration
+#
+# Supported engines: "miri", "cargo", "nextest", "nothing"
+# Environment variables in `env` are exported before test command runs.
+# `flags` are appended to the selected test command.
+
+engine = "nextest"
+env = ["MAE_TESTCONTAINERS=1"]
+flags = ["--features", "integration-testing"]

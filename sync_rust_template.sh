@@ -314,14 +314,14 @@ fi
 # 2b. Template test helpers are provided by `mae::testing`; no must.rs sync step.
 
 # moving over testing CI files so the developer can define how hooks and pre-pushes run tests
-ci_env=".ci/ci_tests.env"
+ci_env=".ci/ci_tests.toml"
 ci_sh=".ci/ci_tests.sh"
 mkdir -p .ci
 
 if [[ ! -f "$ci_sh" ]]; then
   cp "$RUST_TEMPLATE_DIR/$ci_sh" "$ci_sh"
   copied=$((copied + 1))
-  echo -e "${GREEN}✔  Created ci environment file${RESET}"
+  echo -e "${GREEN}✔  Created ci test config file${RESET}"
 else
   if $FORCE; then
     cp "$RUST_TEMPLATE_DIR/$ci_sh" "$ci_sh"
@@ -334,9 +334,13 @@ else
 fi
 
 if [[ ! -f "$ci_env" ]]; then
-  echo "TEST_WITH=cargo" >"$ci_env"
+  cat >"$ci_env" <<'EOF'
+engine = "nextest"
+env = ["MAE_TESTCONTAINERS=1"]
+flags = ["--features", "integration-testing"]
+EOF
   copied=$((copied + 1))
-  echo -e "${GREEN}✔  Created ci environment file${RESET}"
+  echo -e "${GREEN}✔  Created ci test config file${RESET}"
 else
   echo -e "${BLUE}📝  Note: ${ci_env} already exists → skipping append${RESET}"
 fi

@@ -2,49 +2,122 @@
 set -euo pipefail
 
 # ────────────────────────────────────────────────
-# CI test selector via .ci_tests.env
-#   TEST_WITH=miri     -> cargo miri test
-#   TEST_WITH=cargo    -> cargo test
-#   TEST_WITH=nextest  -> cargo nextest run
-#   TEST_WITH=nothing  -> skip tests
-#   (missing file/key defaults to nextest)
+# CI test selector via .ci/ci_tests.toml
+#   engine = "miri"     -> cargo miri test
+#   engine = "cargo"    -> cargo test
+#   engine = "nextest"  -> cargo nextest run
+#   engine = "nothing"  -> skip tests
 #
-# Exit code propagates to caller:
-# - test failures return non-zero and this script exits non-zero
-# - unknown TEST_WITH exits 1
+# Optional TOML keys:
+#   env = ["KEY=VALUE", ...]  # exported before running tests
+#   flags = ["--features", "integration-testing", ...]
+#
+# Env var overrides (highest priority):
+#   TEST_WITH, CI_TEST_ENGINE, CI_TEST_FLAGS, CI_TEST_ENV
+#
+# Defaults when file/key missing:
+#   engine=nextest
+#   env=["MAE_TESTCONTAINERS=1"]
+#   flags=["--features", "integration-testing"]
 # ────────────────────────────────────────────────
 
 repo_root="$(git rev-parse --show-toplevel)"
-ENV_FILE="$repo_root/.ci/ci_tests.env"
-TEST_WITH=nextest
+CFG_FILE="$repo_root/.ci/ci_tests.toml"
 
-if [[ -f "$ENV_FILE" ]]; then
-  val="$(grep -E '^[[:space:]]*TEST_WITH=' "$ENV_FILE" |
-    tail -n 1 |
-    cut -d= -f2- |
-    tr -d '[:space:]\r')"
-  [[ -n "$val" ]] && TEST_WITH="$val"
+TEST_WITH="${TEST_WITH:-${CI_TEST_ENGINE:-nextest}}"
+CI_TEST_FLAGS_VALUE="${CI_TEST_FLAGS:-}"
+CI_TEST_ENV_VALUE="${CI_TEST_ENV:-}"
+
+TOML_STATE="$(python3 - "$CFG_FILE" <<'PY'
+import json
+import os
+import sys
+
+cfg_path = sys.argv[1]
+
+defaults = {
+    "engine": "nextest",
+    "flags": ["--features", "integration-testing"],
+    "env": ["MAE_TESTCONTAINERS=1"],
+}
+
+cfg = {}
+if os.path.exists(cfg_path):
+    with open(cfg_path, "rb") as f:
+        try:
+            import tomllib
+            parsed = tomllib.load(f)
+        except Exception:
+            parsed = {}
+    if isinstance(parsed, dict):
+        cfg = parsed
+
+engine = cfg.get("engine", defaults["engine"])
+flags = cfg.get("flags", defaults["flags"])
+env = cfg.get("env", defaults["env"])
+
+if not isinstance(engine, str):
+    engine = defaults["engine"]
+if not isinstance(flags, list):
+    flags = defaults["flags"]
+if not isinstance(env, list):
+    env = defaults["env"]
+
+flags = [str(x) for x in flags]
+env = [str(x) for x in env]
+
+print(json.dumps({"engine": engine.strip(), "flags": flags, "env": env}))
+PY
+)"
+
+if [[ -z "${TEST_WITH:-}" ]]; then
+  TEST_WITH="$(python3 -c 'import json,sys;print(json.loads(sys.argv[1])["engine"])' "$TOML_STATE")"
+fi
+
+if [[ -z "$CI_TEST_FLAGS_VALUE" ]]; then
+  CI_TEST_FLAGS_VALUE="$(python3 -c 'import json,sys; print(" ".join(json.loads(sys.argv[1])["flags"]))' "$TOML_STATE")"
+fi
+
+if [[ -z "$CI_TEST_ENV_VALUE" ]]; then
+  CI_TEST_ENV_VALUE="$(python3 -c 'import json,sys; print("\n".join(json.loads(sys.argv[1])["env"]))' "$TOML_STATE")"
+fi
+
+if [[ -n "$CI_TEST_ENV_VALUE" ]]; then
+  while IFS= read -r kv; do
+    [[ -z "$kv" ]] && continue
+    if [[ "$kv" != *=* ]]; then
+      echo "❌ ERROR: invalid env entry '$kv' (expected KEY=VALUE)" >&2
+      exit 1
+    fi
+    export "$kv"
+  done <<< "$CI_TEST_ENV_VALUE"
+fi
+
+ARGS=()
+if [[ -n "$CI_TEST_FLAGS_VALUE" ]]; then
+  # shellcheck disable=SC2206
+  ARGS=($CI_TEST_FLAGS_VALUE)
 fi
 
 case "$TEST_WITH" in
 miri)
-  echo "▶ Running: cargo miri test"
-  cargo miri test
+  echo "▶ Running: cargo miri test ${ARGS[*]}"
+  cargo miri test "${ARGS[@]}"
   ;;
 cargo)
-  echo "▶ Running: cargo test"
-  cargo test
+  echo "▶ Running: cargo test ${ARGS[*]}"
+  cargo test "${ARGS[@]}"
   ;;
 nextest)
-  echo "▶ Running: cargo nextest run"
-  cargo nextest run
+  echo "▶ Running: cargo nextest run ${ARGS[*]}"
+  cargo nextest run "${ARGS[@]}"
   ;;
 nothing)
-  echo "▶ Skipping tests (TEST_WITH=nothing)"
+  echo "▶ Skipping tests (engine=nothing)"
   exit 0
   ;;
 *)
-  echo "❌ ERROR: Unknown environemt, TEST_WITH='$TEST_WITH' (expected: miri|cargo|nextest|nothing)" >&2
+  echo "❌ ERROR: Unknown test engine '$TEST_WITH' (expected: miri|cargo|nextest|nothing)" >&2
   exit 1
   ;;
 esac
