@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - production
+
+jobs:
+  integrity:
+    name: Integrity & Unit Tests
+    runs-on: [self-hosted, mae-runner]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: llvm-tools-preview, rustfmt, clippy
+
+      - name: Install cargo tools
+        run: |
+          cargo install cargo-llvm-cov --locked 2>/dev/null || true
+          cargo install cargo-deny --locked 2>/dev/null || true
+
+      - name: Run smoke test (integrity + unit coverage)
+        env:
+          SKIP_TESTS: "1"
+        run: bash scripts/smoke-test.sh
+
+  integration:
+    name: Integration Tests
+    runs-on: [self-hosted, mae-runner]
+    needs: integrity
+    services:
+      postgres:
+        image: ghcr.io/mae-technologies/postgres-mae:latest
+        credentials:
+          username: ${{ secrets.GHCR_USERNAME }}
+          password: ${{ secrets.GHCR_TOKEN }}
+        env:
+          # Matches docker-compose.yml / configuration/test.yaml values
+          APP_ENV: "test"
+          DB_HOST: "127.0.0.1"
+          DB_PORT: "5432"
+          APP_DB_NAME: "mae_test"
+          SUPERUSER: "postgres"
+          SUPERUSER_PWD: "password"
+          MIGRATOR_USER: "db_migrator"
+          MIGRATOR_PWD: "migrator_secret"
+          APP_USER: "app"
+          APP_USER_PWD: "secret"
+          TABLE_PROVISIONER_USER: "table_provisioner"
+          TABLE_PROVISIONER_PWD: "provisioner_secret"
+          SEARCH_PATH: "app"
+          CONFIRM_IRREVOCABLE_DATABASE_WIPE: "false"
+        ports:
+          - 5432:5432
+      neo4j:
+        image: neo4j:5
+        env:
+          NEO4J_AUTH: neo4j/testpassword
+        ports:
+          - 7687:7687
+      rabbitmq:
+        image: rabbitmq:3-management
+        env:
+          RABBITMQ_DEFAULT_USER: guest
+          RABBITMQ_DEFAULT_PASS: guest
+        ports:
+          - 5672:5672
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: llvm-tools-preview
+
+      - name: Install cargo-nextest
+        run: cargo install cargo-nextest --locked 2>/dev/null || true
+
+      - name: Run integration tests
+        env:
+          APP_ENVIRONMENT: test
+          MAE_TESTCONTAINERS: "0"
+          REDIS_URL: redis://localhost:6379
+        run: bash scripts/int-test.sh
