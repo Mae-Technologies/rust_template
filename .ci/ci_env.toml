@@ -4,6 +4,8 @@
 # Environment variables in `env` are exported before test command runs.
 # `flags` are appended to the selected test command.
 
+coverage_threshold = 45
+
 engine = "nextest"
 env = ["MAE_TESTCONTAINERS=1"]
 flags = ["--all-features", "--run-ignored", "all", "--no-tests=warn"]

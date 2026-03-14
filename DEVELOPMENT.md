@@ -6,6 +6,32 @@ This project enforces Rust best practices using nightly tooling, aggressive lint
 
 ## Prerequisites
 
+### cargo-llvm-cov (Required)
+
+`cargo-llvm-cov` is **mandatory** for this project. The pre-push hook and `smoke-test.sh` will **hard-fail** if it is not installed.
+
+**Install via cargo:**
+
+```bash
+cargo +nightly install cargo-llvm-cov
+```
+
+**Install via Homebrew (macOS/Linux):**
+
+```bash
+brew install cargo-llvm-cov
+```
+
+**Verify installation:**
+
+```bash
+cargo llvm-cov --version
+```
+
+For more options, see: https://github.com/taiki-e/cargo-llvm-cov#installation
+
+> ⚠️ Without `cargo-llvm-cov` installed, you will **not** be able to push commits. This is intentional — coverage checking is a hard requirement, not optional.
+
 ### TruffleHog (Required)
 
 TruffleHog is **mandatory** for this project. The pre-push hook and `smoke-test.sh` will **hard-fail** if it is not installed.

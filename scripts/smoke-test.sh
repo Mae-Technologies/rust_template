@@ -95,6 +95,32 @@ else
 fi
 
 ########################################
+# 📊 Coverage (cargo llvm-cov)
+########################################
+if ! command -v cargo-llvm-cov >/dev/null 2>&1 && ! cargo llvm-cov --version >/dev/null 2>&1; then
+  err "❌ cargo-llvm-cov is not installed — coverage checking is mandatory."
+  err "   Install it: see DEVELOPMENT.md or https://github.com/taiki-e/cargo-llvm-cov#installation"
+  exit 1
+fi
+
+# Read coverage threshold from CI config (fall back to 45%)
+COV_THRESHOLD=45
+CI_ENV_TOML="$(dirname "$0")/../.ci/ci_env.toml"
+if [[ -f "$CI_ENV_TOML" ]]; then
+  _parsed=$(python3 -c "
+import tomllib, sys, pathlib
+d = tomllib.loads(pathlib.Path(sys.argv[1]).read_text())
+print(d.get('coverage_threshold', ''))
+" "$CI_ENV_TOML" 2>/dev/null || true)
+  if [[ -n "$_parsed" ]]; then
+    COV_THRESHOLD="$_parsed"
+  fi
+fi
+
+run "coverage (≥${COV_THRESHOLD}% lines)" cargo +nightly llvm-cov --lib --fail-under-lines "$COV_THRESHOLD"
+ok "✔  Coverage threshold met"
+
+########################################
 # 🔍 Lint / Security / Policy
 ########################################
 run "clippy" cargo clippy -- -D warnings
