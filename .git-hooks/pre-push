@@ -2,4 +2,4 @@
 set -euo pipefail
 
 repo_root="$(git rev-parse --show-toplevel)"
-exec "$repo_root/.ci/pre_push_gate.sh" "$@"
+exec "$repo_root/scripts/smoke-test.sh" "$@"
