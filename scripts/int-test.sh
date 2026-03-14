@@ -45,7 +45,6 @@ if [[ ! -f "$CFG_FILE" ]]; then
 fi
 
 # Parse TOML config via Python
-# Parse TOML config via Python
 TOML_STATE="$(python3 - "$CFG_FILE" <<'PY'
 import json
 import os
