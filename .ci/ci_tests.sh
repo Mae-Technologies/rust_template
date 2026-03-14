@@ -18,7 +18,7 @@ set -euo pipefail
 # Defaults when file/key missing:
 #   engine=nextest
 #   env=["MAE_TESTCONTAINERS=1"]
-#   flags=["--features", "integration-testing"]
+#   flags=["--features", "integration-testing", "--all-features", "--ignored", "all"]
 # ────────────────────────────────────────────────
 
 repo_root="$(git rev-parse --show-toplevel)"
@@ -37,7 +37,7 @@ cfg_path = sys.argv[1]
 
 defaults = {
     "engine": "nextest",
-    "flags": ["--features", "integration-testing"],
+    "flags": ["--features", "integration-testing", "--all-features", "--ignored", "all"],
     "env": ["MAE_TESTCONTAINERS=1"],
 }
 
