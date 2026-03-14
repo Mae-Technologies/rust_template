@@ -356,6 +356,26 @@ else
   echo -e "${BLUE}📝  Note: ${cargo_conf} already has git-fetch-with-cli → skipping${RESET}"
 fi
 
+# 2c. Bootstrap TruffleHog for secret scanning (issue #17)
+#
+# TruffleHog is used by smoke-test.sh to scan for leaked secrets before push.
+# We install it if not already present. Supports Linux amd64/arm64 and macOS.
+if ! command -v trufflehog >/dev/null 2>&1; then
+  echo -e "${BLUE}⏱  Installing TruffleHog for secret scanning...${RESET}"
+  if command -v brew >/dev/null 2>&1; then
+    brew install trufflehog 2>/dev/null && echo -e "${GREEN}✔  TruffleHog installed via brew${RESET}" \
+      || echo -e "${YELLOW}⚠️  brew install trufflehog failed — install manually: https://github.com/trufflesecurity/trufflehog#installation${RESET}"
+  elif command -v curl >/dev/null 2>&1; then
+    curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin 2>/dev/null \
+      && echo -e "${GREEN}✔  TruffleHog installed via install script${RESET}" \
+      || echo -e "${YELLOW}⚠️  TruffleHog install script failed — install manually: https://github.com/trufflesecurity/trufflehog#installation${RESET}"
+  else
+    echo -e "${YELLOW}⚠️  Cannot auto-install TruffleHog (no brew or curl). Install manually: https://github.com/trufflesecurity/trufflehog#installation${RESET}"
+  fi
+else
+  echo -e "${BLUE}📝  Note: TruffleHog already installed → $(trufflehog --version 2>/dev/null || echo 'unknown version')${RESET}"
+fi
+
 # 3. Handle README.md
 readme_link="For development rules, see [DEVELOPMENT.md](DEVELOPMENT.md)"
 if [[ ! -f "README.md" ]]; then
