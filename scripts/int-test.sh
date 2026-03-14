@@ -45,8 +45,7 @@ if [[ ! -f "$CFG_FILE" ]]; then
 fi
 
 # Parse TOML config via Python
-# TODO: This TOML parsing block is duplicated in .ci/ci_tests.sh.
-# Consider extracting into a shared helper (e.g. .ci/parse_ci_env.py).
+# Parse TOML config via Python
 TOML_STATE="$(python3 - "$CFG_FILE" <<'PY'
 import json
 import os

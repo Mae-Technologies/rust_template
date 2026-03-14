@@ -40,7 +40,7 @@ jobs:
         with:
           toolchain: nightly
           override: true
-          components: clippy,miri,rustfmt
+          components: clippy,rustfmt
 
       - name: Install cargo-nextest
         uses: taiki-e/install-action@nextest

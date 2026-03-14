@@ -344,6 +344,12 @@ else
   echo -e "${YELLOW}⚠️  Warning: Template .ci/ directory not found — skipped${RESET}"
 fi
 
+# Cleanup: remove deprecated .ci/ci_tests.sh from target if it exists
+if [[ -f ".ci/ci_tests.sh" ]]; then
+  rm -f ".ci/ci_tests.sh"
+  echo -e "${GREEN}✔  Removed deprecated .ci/ci_tests.sh${RESET}"
+fi
+
 # creating/updating .cargo/config.toml with git-fetch-with-cli
 cargo_conf=".cargo/config.toml"
 mkdir -p ".cargo"

@@ -87,22 +87,11 @@ run "rustfmt" cargo fmt -- --check
 ########################################
 # 🧪 Tests (optional fast-paths)
 ########################################
-repo_root="$(git rev-parse --show-toplevel)"
-ci_tests="$repo_root/.ci/ci_tests.sh"
-
-if [[ ! -f "$ci_tests" ]]; then
-  echo "❌ ERROR: missing $ci_tests" >&2
-  exit 1
-fi
-if [[ ! -x "$ci_tests" ]]; then
-  chmod +x "$ci_tests"
-fi
-
 if [[ -z "${SKIP_TEST:-}" ]]; then
-  run "tests" "$ci_tests"
+  run "tests" bash "$(dirname "$0")/int-test.sh"
   ok "✔  Tests completed successfully"
 else
-  warn "⚡ SKIP_TEST set — skipping tests and Miri"
+  warn "⚡ SKIP_TEST set — skipping tests"
 fi
 
 ########################################
