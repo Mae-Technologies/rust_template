@@ -52,4 +52,4 @@ jobs:
       - name: Run smoke-test
         run: |
           chmod +x scripts/smoke-test.sh
-          SKIP_GUARD=1 scripts/smoke-test.sh
+          scripts/smoke-test.sh
