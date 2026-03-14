@@ -344,6 +344,26 @@ else
   echo -e "${YELLOW}⚠️  Warning: Template .ci/ directory not found — skipped${RESET}"
 fi
 
+# Copy scripts/ from template to target service
+SRC_SCRIPTS_DIR="$RUST_TEMPLATE_DIR/scripts"
+if [[ -d "$SRC_SCRIPTS_DIR" ]]; then
+  mkdir -p "./scripts"
+  while IFS= read -r -d '' src_script; do
+    rel_script="${src_script#$SRC_SCRIPTS_DIR/}"
+    dst_script="./scripts/$rel_script"
+    mkdir -p "$(dirname "$dst_script")"
+    if [[ -f "$dst_script" ]] && ! $FORCE; then
+      echo -e "${YELLOW}⚠️  Skipping scripts/$rel_script (exists, use --force to overwrite)${RESET}"
+    else
+      cp "$src_script" "$dst_script"
+      chmod +x "$dst_script"
+      echo -e "${GREEN}✔  Copied scripts/$rel_script${RESET}"
+    fi
+  done < <(find "$SRC_SCRIPTS_DIR" -type f -print0)
+else
+  echo -e "${YELLOW}⚠️  Warning: Template scripts/ directory not found — skipped${RESET}"
+fi
+
 # Cleanup: remove deprecated .ci/ci_tests.sh from target if it exists
 if [[ -f ".ci/ci_tests.sh" ]]; then
   rm -f ".ci/ci_tests.sh"
