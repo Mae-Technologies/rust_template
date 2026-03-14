@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ────────────────────────────────────────────────
-# CI test selector via .ci/ci_tests.toml
+# CI test selector via .ci/ci_env.toml
 #   engine = "miri"     -> cargo miri test
 #   engine = "cargo"    -> cargo test
 #   engine = "nextest"  -> cargo nextest run
@@ -22,7 +22,7 @@ set -euo pipefail
 # ────────────────────────────────────────────────
 
 repo_root="$(git rev-parse --show-toplevel)"
-CFG_FILE="$repo_root/.ci/ci_tests.toml"
+CFG_FILE="$repo_root/.ci/ci_env.toml"
 
 TEST_WITH="${TEST_WITH:-${CI_TEST_ENGINE:-}}"
 CI_TEST_FLAGS_VALUE="${CI_TEST_FLAGS:-}"

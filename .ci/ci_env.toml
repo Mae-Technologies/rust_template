@@ -6,4 +6,4 @@
 
 engine = "nextest"
 env = ["MAE_TESTCONTAINERS=1"]
-flags = ["--features", "integration-testing"]
+flags = ["--features", "integration-testing", "--all-features", "--ignored", "all"]

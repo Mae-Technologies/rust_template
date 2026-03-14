@@ -185,7 +185,7 @@ declare -a CONFIG_FILES=(
 )
 
 # Special workflow file
-WORKFLOW_FILE=".github/workflows/rust-integrity-guard.yaml"
+WORKFLOW_FILE=".github/workflows/cooked-crab.yaml"
 
 # Pre-push hook
 HOOK_DIR=".git-hooks/"
@@ -314,35 +314,34 @@ fi
 # 2b. Template test helpers are provided by `mae::testing`; no must.rs sync step.
 
 # moving over testing CI files so the developer can define how hooks and pre-pushes run tests
-ci_env=".ci/ci_tests.toml"
-ci_sh=".ci/ci_tests.sh"
+# Copy all .ci/* files from template to ensure changes propagate
 mkdir -p .ci
 
-if [[ ! -f "$ci_sh" ]]; then
-  cp "$RUST_TEMPLATE_DIR/$ci_sh" "$ci_sh"
-  copied=$((copied + 1))
-  echo -e "${GREEN}✔  Created ci test config file${RESET}"
-else
-  if $FORCE; then
-    cp "$RUST_TEMPLATE_DIR/$ci_sh" "$ci_sh"
-    chmod +x "$ci_sh"
-    overwritten=$((overwritten + 1))
-    echo -e "${GREEN}✔  Overwritten existing ci script: $ci_sh (with --force)${RESET}"
-  else
-    echo -e "${BLUE}📝  Note: ${ci_env} already exists → skipping append (use --force to overwrite)${RESET}"
-  fi
-fi
+SRC_CI_DIR="$RUST_TEMPLATE_DIR/.ci"
+if [[ -d "$SRC_CI_DIR" ]]; then
+  while IFS= read -r -d '' src_ci_file; do
+    rel_ci="${src_ci_file#$SRC_CI_DIR/}"
+    dst_ci=".ci/$rel_ci"
+    mkdir -p "$(dirname "$dst_ci")"
 
-if [[ ! -f "$ci_env" ]]; then
-  cat >"$ci_env" <<'EOF'
-engine = "nextest"
-env = ["MAE_TESTCONTAINERS=1"]
-flags = ["--features", "integration-testing"]
-EOF
-  copied=$((copied + 1))
-  echo -e "${GREEN}✔  Created ci test config file${RESET}"
+    if [[ -e "$dst_ci" ]]; then
+      if $FORCE; then
+        cp "$src_ci_file" "$dst_ci"
+        [[ -x "$src_ci_file" ]] && chmod +x "$dst_ci"
+        overwritten=$((overwritten + 1))
+        echo -e "${GREEN}✔  Overwritten .ci/$rel_ci (with --force)${RESET}"
+      else
+        echo -e "${BLUE}📝  Note: $dst_ci already exists → skipping (use --force to overwrite)${RESET}"
+      fi
+    else
+      cp "$src_ci_file" "$dst_ci"
+      [[ -x "$src_ci_file" ]] && chmod +x "$dst_ci"
+      copied=$((copied + 1))
+      echo -e "${GREEN}✔  Created .ci/$rel_ci${RESET}"
+    fi
+  done < <(find "$SRC_CI_DIR" -type f -print0)
 else
-  echo -e "${BLUE}📝  Note: ${ci_env} already exists → skipping append${RESET}"
+  echo -e "${YELLOW}⚠️  Warning: Template .ci/ directory not found — skipped${RESET}"
 fi
 
 # creating/updating .cargo/config.toml with git-fetch-with-cli
@@ -356,25 +355,8 @@ else
   echo -e "${BLUE}📝  Note: ${cargo_conf} already has git-fetch-with-cli → skipping${RESET}"
 fi
 
-# 2c. Bootstrap TruffleHog for secret scanning (issue #17)
-#
-# TruffleHog is used by smoke-test.sh to scan for leaked secrets before push.
-# We install it if not already present. Supports Linux amd64/arm64 and macOS.
-if ! command -v trufflehog >/dev/null 2>&1; then
-  echo -e "${BLUE}⏱  Installing TruffleHog for secret scanning...${RESET}"
-  if command -v brew >/dev/null 2>&1; then
-    brew install trufflehog 2>/dev/null && echo -e "${GREEN}✔  TruffleHog installed via brew${RESET}" \
-      || echo -e "${YELLOW}⚠️  brew install trufflehog failed — install manually: https://github.com/trufflesecurity/trufflehog#installation${RESET}"
-  elif command -v curl >/dev/null 2>&1; then
-    curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin 2>/dev/null \
-      && echo -e "${GREEN}✔  TruffleHog installed via install script${RESET}" \
-      || echo -e "${YELLOW}⚠️  TruffleHog install script failed — install manually: https://github.com/trufflesecurity/trufflehog#installation${RESET}"
-  else
-    echo -e "${YELLOW}⚠️  Cannot auto-install TruffleHog (no brew or curl). Install manually: https://github.com/trufflesecurity/trufflehog#installation${RESET}"
-  fi
-else
-  echo -e "${BLUE}📝  Note: TruffleHog already installed → $(trufflehog --version 2>/dev/null || echo 'unknown version')${RESET}"
-fi
+# TruffleHog is required for secret scanning — see DEVELOPMENT.md for installation.
+# The pre-push hook and smoke-test.sh will hard-fail if trufflehog is not installed.
 
 # 3. Handle README.md
 readme_link="For development rules, see [DEVELOPMENT.md](DEVELOPMENT.md)"

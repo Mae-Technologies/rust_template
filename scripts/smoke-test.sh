@@ -132,20 +132,18 @@ run "cargo deny" cargo deny check
 #
 # Skip: set SKIP_SECRET_SCAN=1 to bypass this step.
 ########################################
-if [[ -z "${SKIP_SECRET_SCAN:-}" ]]; then
-  if command -v trufflehog >/dev/null 2>&1; then
-    trufflehog_args=(git "file://." --since-commit HEAD~1 --only-verified --fail)
-    if [[ -f ".trufflehog-ignore" ]]; then
-      trufflehog_args+=(--exclude-paths .trufflehog-ignore)
-    fi
-    run "secret scan (trufflehog)" trufflehog "${trufflehog_args[@]}"
-    ok "✔  No secrets detected"
-  else
-    warn "⚠️  trufflehog not found — skipping secret scan (install: https://github.com/trufflesecurity/trufflehog#installation)"
-  fi
-else
-  warn "⚡ SKIP_SECRET_SCAN set — skipping secret scan"
+if ! command -v trufflehog >/dev/null 2>&1; then
+  err "❌ trufflehog is not installed — secret scanning is mandatory."
+  err "   Install it: see DEVELOPMENT.md or https://github.com/trufflesecurity/trufflehog#installation"
+  exit 1
 fi
+
+trufflehog_args=(git "file://." --since-commit HEAD~1 --only-verified --fail)
+if [[ -f ".trufflehog-ignore" ]]; then
+  trufflehog_args+=(--exclude-paths .trufflehog-ignore)
+fi
+run "secret scan (trufflehog)" trufflehog "${trufflehog_args[@]}"
+ok "✔  No secrets detected"
 
 echo
 ok "✅  All Rust checks passed — continuing push"
