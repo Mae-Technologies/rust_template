@@ -4,7 +4,7 @@ set -euo pipefail
 ########################################
 # 🎨 Color Support (Cargo colors untouched)
 ########################################
-if command -v tput >/dev/null 2>&1 && [ "$(tput colors)" -ge 8 ]; then
+if command -v tput >/dev/null 2>&1 && [ "$(tput colors 2>/dev/null || echo 0)" -ge 8 ]; then
   RED="$(tput setaf 1)"
   GREEN="$(tput setaf 2)"
   YELLOW="$(tput setaf 3)"
