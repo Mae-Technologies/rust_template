@@ -24,7 +24,7 @@ set -euo pipefail
 repo_root="$(git rev-parse --show-toplevel)"
 CFG_FILE="$repo_root/.ci/ci_tests.toml"
 
-TEST_WITH="${TEST_WITH:-${CI_TEST_ENGINE:-nextest}}"
+TEST_WITH="${TEST_WITH:-${CI_TEST_ENGINE:-}}"
 CI_TEST_FLAGS_VALUE="${CI_TEST_FLAGS:-}"
 CI_TEST_ENV_VALUE="${CI_TEST_ENV:-}"
 
@@ -45,7 +45,7 @@ cfg = {}
 if os.path.exists(cfg_path):
     with open(cfg_path, "rb") as f:
         try:
-            import tomllib
+            import tomllib  # requires Python 3.11+
             parsed = tomllib.load(f)
         except Exception:
             parsed = {}
