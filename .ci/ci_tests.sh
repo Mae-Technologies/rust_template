@@ -18,7 +18,7 @@ set -euo pipefail
 # Defaults when file/key missing:
 #   engine=nextest
 #   env=["MAE_TESTCONTAINERS=1"]
-#   flags=["--features", "integration-testing", "--all-features", "--ignored", "all"]
+#   flags=["--features", "integration-testing", "--all-features", "--run-ignored", "all"]
 # ────────────────────────────────────────────────
 
 repo_root="$(git rev-parse --show-toplevel)"
@@ -28,6 +28,8 @@ TEST_WITH="${TEST_WITH:-${CI_TEST_ENGINE:-}}"
 CI_TEST_FLAGS_VALUE="${CI_TEST_FLAGS:-}"
 CI_TEST_ENV_VALUE="${CI_TEST_ENV:-}"
 
+# TODO: This TOML parsing block is duplicated in scripts/int-test.sh.
+# Consider extracting into a shared helper (e.g. .ci/parse_ci_env.py).
 TOML_STATE="$(python3 - "$CFG_FILE" <<'PY'
 import json
 import os
@@ -37,7 +39,7 @@ cfg_path = sys.argv[1]
 
 defaults = {
     "engine": "nextest",
-    "flags": ["--features", "integration-testing", "--all-features", "--ignored", "all"],
+    "flags": ["--features", "integration-testing", "--all-features", "--run-ignored", "all"],
     "env": ["MAE_TESTCONTAINERS=1"],
 }
 

@@ -45,6 +45,8 @@ if [[ ! -f "$CFG_FILE" ]]; then
 fi
 
 # Parse TOML config via Python
+# TODO: This TOML parsing block is duplicated in .ci/ci_tests.sh.
+# Consider extracting into a shared helper (e.g. .ci/parse_ci_env.py).
 TOML_STATE="$(python3 - "$CFG_FILE" <<'PY'
 import json
 import os
@@ -54,7 +56,7 @@ cfg_path = sys.argv[1]
 
 defaults = {
     "engine": "nextest",
-    "flags": ["--features", "integration-testing"],
+    "flags": ["--features", "integration-testing", "--all-features", "--run-ignored", "all"],
     "env": ["MAE_TESTCONTAINERS=1"],
 }
 

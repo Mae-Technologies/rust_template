@@ -31,11 +31,6 @@ err() { echo "${RED}$*${RESET}" >&2; }
 # 1️⃣ RUST PRE-PUSH CHECKS
 ########################################
 
-# Only run in interactive shells (keeps Cargo colors)
-if [[ ! -t 1 ]]; then
-  exit 0
-fi
-
 # Global bypass
 if [[ -n "${SKIP_GUARD:-}" ]]; then
   warn "⚠️  SKIP_GUARD set — skipping Rust quality gate"
