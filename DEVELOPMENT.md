@@ -4,6 +4,34 @@ Focus on code quality, safety, security, and reliability.
 
 This project enforces Rust best practices using nightly tooling, aggressive linting, undefined behavior detection, dependency auditing (with `cargo-deny`), comprehensive CI, and Licensing.
 
+## Prerequisites
+
+### TruffleHog (Required)
+
+TruffleHog is **mandatory** for this project. The pre-push hook and `smoke-test.sh` will **hard-fail** if it is not installed.
+
+**Install via Homebrew (macOS/Linux):**
+
+```bash
+brew install trufflehog
+```
+
+**Install via install script (Linux):**
+
+```bash
+curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+```
+
+**Verify installation:**
+
+```bash
+trufflehog --version
+```
+
+For more options, see: https://github.com/trufflesecurity/trufflehog#installation
+
+> ⚠️ Without `trufflehog` installed, you will **not** be able to push commits. This is intentional — secret scanning is a hard requirement, not optional.
+
 ## Key Features
 
 - **Nightly Rust toolchain** with `rustfmt`, `clippy`, and `miri` (`rust-toolchain.toml`)
@@ -90,7 +118,7 @@ Enforces workspace-wide dependency policy:
 
 [read the `cargo-deny` docs](https://embarkstudios.github.io/cargo-deny/checks/bans/cfg.html)
 
-### GitHub Actions CI (`.github/workflows/rust_ci.yaml`)
+### GitHub Actions CI (`.github/workflows/cooked-crab.yaml`)
 
 Triggers on push/PR to `main` or `master`. Includes:
 
@@ -295,7 +323,7 @@ When run from the root of a Rust project (must contain `Cargo.toml`), it:
   - `rustfmt.toml` (opinionated code formatting)
 
 - Copies the GitHub Actions workflow:
-  - `.github/workflows/rust-integrity-guard.yaml`  
+  - `.github/workflows/cooked-crab.yaml`  
     (creates the `.github/workflows/` directory if missing; skips if the file exists unless `--force` is used)
 
 - Handles `DEVELOPMENT.md`:
@@ -340,7 +368,7 @@ Prerequisites
 2. Verify the template directory exists:
 
    ```bash
-   ls "$RUST_TEMPLATE_DIR" # Should show clippy.toml, deny.toml, .github/workflows/rust-integrity-guard.yaml, etc.
+   ls "$RUST_TEMPLATE_DIR" # Should show clippy.toml, deny.toml, .github/workflows/cooked-crab.yaml, etc.
    ```
 
 Installation & Setup
@@ -401,14 +429,14 @@ sync-rust-template --force
 
 # Check results
 ls -l clippy.toml deny.toml rust-toolchain.toml rustfmt.toml DEVELOPMENT.md
-ls -l .github/workflows/rust-integrity-guard.yaml
+ls -l .github/workflows/cooked-crab.yaml
 head -n 20 src/lib.rs # Should show template header
 head -n 5 README.md   # Should show DEVELOPMENT.md link
 
 # Commit
 git add clippy.toml deny.toml rust-toolchain.toml rustfmt.toml \
        DEVELOPMENT.md README.md src/lib.rs \
-       .github/workflows/rust-integrity-guard.yaml
+       .github/workflows/cooked-crab.yaml
 git commit -m "chore: sync rust_template configs, workflow, and development docs"
 ```
 
@@ -423,8 +451,8 @@ Target directory:     /home/user/projects/my-rust-app
 '/path/to/your/rust_template/deny.toml' -> './deny.toml'
 '/path/to/your/rust_template/rust-toolchain.toml' -> './rust-toolchain.toml'
 '/path/to/your/rust_template/rustfmt.toml' -> './rustfmt.toml'
-'/path/to/your/rust_template/.github/workflows/rust-integrity-guard.yaml' -> './.github/workflows/rust-integrity-guard.yaml'
-Created workflow file: .github/workflows/rust-integrity-guard.yaml
+'/path/to/your/rust_template/.github/workflows/cooked-crab.yaml' -> './.github/workflows/cooked-crab.yaml'
+Created workflow file: .github/workflows/cooked-crab.yaml
 '/path/to/your/rust_template/README.md' -> './DEVELOPMENT.md'
 Overwriting DEVELOPMENT.md (with --force)
 Created/Updated DEVELOPMENT.md from template README.md
