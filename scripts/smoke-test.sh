@@ -95,6 +95,16 @@ else
 fi
 
 ########################################
+# 📊 Coverage (cargo llvm-cov)
+########################################
+if command -v cargo-llvm-cov >/dev/null 2>&1 || cargo llvm-cov --version >/dev/null 2>&1; then
+  run "coverage (≥45% lines)" cargo +nightly llvm-cov --lib --fail-under-lines 45
+  ok "✔  Coverage threshold met"
+else
+  warn "⚠️  cargo-llvm-cov not installed — skipping coverage check"
+fi
+
+########################################
 # 🔍 Lint / Security / Policy
 ########################################
 run "clippy" cargo clippy -- -D warnings
