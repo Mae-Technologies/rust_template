@@ -4,3 +4,7 @@ database:
 database_admin:
   db_name: "service_test_db"
   superuser_password: "postgres"
+
+messagebroker:
+  username: "guest"
+  password: "guest"

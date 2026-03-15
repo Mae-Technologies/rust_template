@@ -24,3 +24,9 @@ graphdb:
   port: "7687"
   username: "neo4j"
   password: "testpassword"
+
+messagebroker:
+  host: "localhost"
+  port: "5672"
+  username: "guest"
+  password: "guest"
