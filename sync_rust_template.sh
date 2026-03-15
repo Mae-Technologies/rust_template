@@ -202,6 +202,14 @@ declare -a HEADER_FILES=(
   # "src/main.rs" # uncomment if desired
 )
 
+# Deprecated files — removed from target services on sync
+declare -a DEPRECATED_FILES=(
+  ".github/workflows/cooked-crab.yaml"
+  ".github/workflows/rust-integrity-guard.yaml"
+  ".ci/ci_tests.sh"
+  ".ci/ci_tests.env"
+)
+
 # ── Pre-check: config files (unless --force) ───────────────────────────
 if ! $FORCE; then
   declare -a existing_config=()
@@ -221,6 +229,7 @@ fi
 declare -i copied=0
 declare -i overwritten=0
 declare -i appended=0
+declare -i removed=0
 
 echo -e "${BLUE}⏱  Syncing from template: $RUST_TEMPLATE_DIR${RESET}"
 echo -e "${BLUE}⏱  Target directory:     $(pwd)${RESET}"
@@ -395,17 +404,16 @@ else
   echo -e "${YELLOW}⚠️  Warning: Template scripts/ directory not found — skipped${RESET}"
 fi
 
-# Cleanup: remove deprecated .ci/ci_tests.env from target if it exists
-if [[ -f ".ci/ci_tests.env" ]]; then
-  rm -f ".ci/ci_tests.env"
-  echo -e "${GREEN}✔  Removed deprecated .ci/ci_tests.env${RESET}"
-fi
-
-# Cleanup: remove deprecated .ci/ci_tests.sh from target if it exists
-if [[ -f ".ci/ci_tests.sh" ]]; then
-  rm -f ".ci/ci_tests.sh"
-  echo -e "${GREEN}✔  Removed deprecated .ci/ci_tests.sh${RESET}"
-fi
+# Remove deprecated files
+echo -e "\n${BLUE}🗑️  Removing deprecated files...${RESET}"
+for dep_file in "${DEPRECATED_FILES[@]}"; do
+  if [[ -e "./$dep_file" ]]; then
+    rm -f "./$dep_file"
+    removed=$((removed + 1))
+    echo -e "${GREEN}✔  Removed deprecated file: $dep_file${RESET}"
+  fi
+done
+[[ $removed -eq 0 ]] && echo -e "${BLUE}  Nothing to remove.${RESET}"
 
 # creating/updating .cargo/config.toml with git-fetch-with-cli
 cargo_conf=".cargo/config.toml"
@@ -626,4 +634,5 @@ echo -e "${GREEN}✔  Done:${RESET}"
 echo -e "  • $copied new file(s) created/copied"
 echo -e "  • $overwritten file(s) overwritten (with --force)"
 echo -e "  • $appended file(s) updated (header or README pointer)"
+[[ $removed -gt 0 ]] && echo -e "  • $removed deprecated file(s) removed"
 echo
