@@ -12,7 +12,7 @@ permissions:
 jobs:
   config:
     name: 📋 Read Config
-    runs-on: [self-hosted, mae-runner]
+    runs-on: mae-runner
     outputs:
       neo4j_user: ${{ steps.read.outputs.neo4j_user }}
       neo4j_password: ${{ steps.read.outputs.neo4j_password }}
@@ -23,9 +23,10 @@ jobs:
 
       - name: Install yq
         run: |
-          command -v yq >/dev/null 2>&1 || \
-            (curl -sSL https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 \
-              -o /usr/local/bin/yq && chmod +x /usr/local/bin/yq)
+          mkdir -p "$HOME/.local/bin"
+          curl -sSL https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 \
+            -o "$HOME/.local/bin/yq" && chmod +x "$HOME/.local/bin/yq"
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Read config
         id: read
@@ -41,7 +42,7 @@ jobs:
 
   integrity:
     name: 🦀 Ferris Says No Bugs
-    runs-on: [self-hosted, mae-runner]
+    runs-on: mae-runner
     needs: config
     steps:
       - uses: actions/checkout@v4
@@ -63,7 +64,7 @@ jobs:
 
   integration:
     name: ⚙️ Integration Gauntlet
-    runs-on: [self-hosted, mae-runner]
+    runs-on: mae-runner
     needs: [integrity, config]
     env:
       NEO4J_USER: ${{ needs.config.outputs.neo4j_user }}
@@ -108,9 +109,10 @@ jobs:
 
       - name: Install yq
         run: |
-          command -v yq >/dev/null 2>&1 || \
-            (curl -sSL https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 \
-              -o /usr/local/bin/yq && chmod +x /usr/local/bin/yq)
+          mkdir -p "$HOME/.local/bin"
+          curl -sSL https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 \
+            -o "$HOME/.local/bin/yq" && chmod +x "$HOME/.local/bin/yq"
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Load database config from test.yaml
         run: |
