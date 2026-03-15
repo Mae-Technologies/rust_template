@@ -1,0 +1,32 @@
+application:
+  host: "0.0.0.0"
+  port: 8080
+
+database:
+  host: "localhost"
+  port: "5432"
+  username: "app"
+  password: "secret"
+  db_name: "service_db"
+
+database_admin:
+  superuser: "postgres"
+  superuser_password: "postgres"
+  superuser_db: "postgres"
+  migrator_user: "db_migrator"
+  migrator_password: "migrator_secret"
+  app_user: "app"
+  app_user_password: "secret"
+  db_name: "service_db"
+
+graphdb:
+  host: "localhost"
+  port: "7687"
+  username: "neo4j"
+  password: "testpassword"
+
+messagebroker:
+  host: "localhost"
+  port: "5672"
+  username: "guest"
+  password: "guest"

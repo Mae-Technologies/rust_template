@@ -1,0 +1,134 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - production
+
+permissions:
+  contents: read
+
+jobs:
+  config:
+    name: 📋 Read Config
+    runs-on: [self-hosted, mae-runner]
+    outputs:
+      neo4j_user: ${{ steps.read.outputs.neo4j_user }}
+      neo4j_password: ${{ steps.read.outputs.neo4j_password }}
+      rabbitmq_user: ${{ steps.read.outputs.rabbitmq_user }}
+      rabbitmq_password: ${{ steps.read.outputs.rabbitmq_password }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install yq
+        run: |
+          command -v yq >/dev/null 2>&1 || \
+            (curl -sSL https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 \
+              -o /usr/local/bin/yq && chmod +x /usr/local/bin/yq)
+
+      - name: Read config
+        id: read
+        run: |
+          # Merge base.yaml with test.yaml overrides
+          CONFIG=$(yq eval-all 'select(fileIndex == 0) * select(fileIndex == 1)' \
+            configuration/base.yaml configuration/test.yaml 2>/dev/null \
+            || cat configuration/base.yaml)
+          echo "neo4j_user=$(echo "$CONFIG" | yq '.graphdb.username')" >> $GITHUB_OUTPUT
+          echo "neo4j_password=$(echo "$CONFIG" | yq '.graphdb.password')" >> $GITHUB_OUTPUT
+          echo "rabbitmq_user=$(echo "$CONFIG" | yq '.messagebroker.username')" >> $GITHUB_OUTPUT
+          echo "rabbitmq_password=$(echo "$CONFIG" | yq '.messagebroker.password')" >> $GITHUB_OUTPUT
+
+  integrity:
+    name: 🦀 Ferris Says No Bugs
+    runs-on: [self-hosted, mae-runner]
+    needs: config
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: llvm-tools-preview, rustfmt, clippy
+
+      - name: Install cargo tools
+        run: |
+          cargo install cargo-llvm-cov --locked 2>/dev/null || true
+          cargo install cargo-deny --locked 2>/dev/null || true
+
+      - name: Run smoke test (integrity + unit coverage)
+        env:
+          SKIP_TESTS: "1"
+        run: bash scripts/smoke-test.sh
+
+  integration:
+    name: ⚙️ Integration Gauntlet
+    runs-on: [self-hosted, mae-runner]
+    needs: [integrity, config]
+    env:
+      NEO4J_USER: ${{ needs.config.outputs.neo4j_user }}
+      NEO4J_PASSWORD: ${{ needs.config.outputs.neo4j_password }}
+      RABBITMQ_USER: ${{ needs.config.outputs.rabbitmq_user }}
+      RABBITMQ_PASSWORD: ${{ needs.config.outputs.rabbitmq_password }}
+    services:
+      postgres:
+        image: ghcr.io/mae-technologies/postgres-mae:latest
+        credentials:
+          username: ${{ secrets.GHCR_USERNAME }}
+          password: ${{ secrets.GHCR_TOKEN }}
+        ports:
+          - 5432:5432
+      neo4j:
+        image: neo4j:5
+        env:
+          NEO4J_AUTH: ${{ env.NEO4J_USER }}/${{ env.NEO4J_PASSWORD }}
+        ports:
+          - 7687:7687
+      rabbitmq:
+        image: rabbitmq:3-management
+        env:
+          RABBITMQ_DEFAULT_USER: ${{ env.RABBITMQ_USER }}
+          RABBITMQ_DEFAULT_PASS: ${{ env.RABBITMQ_PASSWORD }}
+        ports:
+          - 5672:5672
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: llvm-tools-preview
+
+      - name: Install cargo-nextest
+        run: cargo install cargo-nextest --locked 2>/dev/null || true
+
+      - name: Install yq
+        run: |
+          command -v yq >/dev/null 2>&1 || \
+            (curl -sSL https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 \
+              -o /usr/local/bin/yq && chmod +x /usr/local/bin/yq)
+
+      - name: Load database config from test.yaml
+        run: |
+          CONFIG=$(yq eval-all 'select(fileIndex == 0) * select(fileIndex == 1)' \
+            configuration/base.yaml configuration/test.yaml 2>/dev/null \
+            || cat configuration/base.yaml)
+          echo "SUPERUSER=$(echo "$CONFIG" | yq '.database_admin.superuser')" >> $GITHUB_ENV
+          echo "SUPERUSER_PWD=$(echo "$CONFIG" | yq '.database_admin.superuser_password')" >> $GITHUB_ENV
+          echo "APP_DB_NAME=$(echo "$CONFIG" | yq '.database_admin.db_name')" >> $GITHUB_ENV
+          echo "MIGRATOR_USER=$(echo "$CONFIG" | yq '.database_admin.migrator_user')" >> $GITHUB_ENV
+          echo "MIGRATOR_PWD=$(echo "$CONFIG" | yq '.database_admin.migrator_password')" >> $GITHUB_ENV
+          echo "APP_USER=$(echo "$CONFIG" | yq '.database_admin.app_user')" >> $GITHUB_ENV
+          echo "APP_USER_PWD=$(echo "$CONFIG" | yq '.database_admin.app_user_password')" >> $GITHUB_ENV
+
+      - name: Run integration tests
+        env:
+          APP_ENVIRONMENT: test
+          MAE_TESTCONTAINERS: "0"
+          REDIS_URL: redis://localhost:6379
+          CONFIRM_IRREVOCABLE_DATABASE_WIPE: "true"
+        run: bash scripts/int-test.sh

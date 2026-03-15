@@ -184,8 +184,14 @@ declare -a CONFIG_FILES=(
   ".gitignore"
 )
 
-# Special workflow file
-WORKFLOW_FILE=".github/workflows/cooked-crab.yaml"
+# Special workflow files
+WORKFLOW_CI_FILE=".github/workflows/ci.yml"
+
+# Configuration files (always synced with --force)
+declare -a CONFIGURATION_FILES=(
+  "configuration/base.yaml"
+  "configuration/test.yaml"
+)
 
 # Pre-push hook
 HOOK_DIR=".git-hooks/"
@@ -240,28 +246,53 @@ for file in "${CONFIG_FILES[@]}"; do
   fi
 done
 
-# 1b. Handle workflow file
-src_workflow="$RUST_TEMPLATE_DIR/$WORKFLOW_FILE"
-dst_workflow="./$WORKFLOW_FILE"
-
-if [[ -f "$src_workflow" ]]; then
-  mkdir -p "$(dirname "$dst_workflow")"
-  if [[ -e "$dst_workflow" ]]; then
-    if $FORCE; then
-      cp "$src_workflow" "$dst_workflow"
-      overwritten=$((overwritten + 1))
-      echo -e "${GREEN}✔  Overwritten existing workflow file (with --force)${RESET}"
+# 1b. Handle workflow files
+sync_workflow_file() {
+  local src_wf="$RUST_TEMPLATE_DIR/$1"
+  local dst_wf="./$1"
+  if [[ -f "$src_wf" ]]; then
+    mkdir -p "$(dirname "$dst_wf")"
+    if [[ -e "$dst_wf" ]]; then
+      if $FORCE; then
+        cp "$src_wf" "$dst_wf"
+        overwritten=$((overwritten + 1))
+        echo -e "${GREEN}✔  Overwritten existing workflow file (with --force): $dst_wf${RESET}"
+      else
+        echo -e "${BLUE}📝  Note: $dst_wf already exists → skipping (use --force to overwrite)${RESET}"
+      fi
     else
-      echo -e "${BLUE}📝  Note: $dst_workflow already exists → skipping (use --force to overwrite)${RESET}"
+      cp "$src_wf" "$dst_wf"
+      copied=$((copied + 1))
+      echo -e "${GREEN}✔  Created workflow file: $dst_wf${RESET}"
     fi
   else
-    cp "$src_workflow" "$dst_workflow"
-    copied=$((copied + 1))
-    echo -e "${GREEN}✔  Created workflow file: $dst_workflow${RESET}"
+    echo -e "${YELLOW}⚠️  Warning: Template workflow file $src_wf not found — skipped${RESET}"
   fi
-else
-  echo -e "${YELLOW}⚠️  Warning: Template workflow file $src_workflow not found — skipped${RESET}"
-fi
+}
+
+sync_workflow_file "$WORKFLOW_CI_FILE"
+
+# 1c-2. Sync configuration files (respects --force flag)
+for cfg_file in "${CONFIGURATION_FILES[@]}"; do
+  src_cfg="$RUST_TEMPLATE_DIR/$cfg_file"
+  dst_cfg="./$cfg_file"
+  if [[ -f "$src_cfg" ]]; then
+    mkdir -p "$(dirname "$dst_cfg")"
+    if [[ -e "$dst_cfg" ]]; then
+      $FORCE && {
+        cp "$src_cfg" "$dst_cfg"
+        overwritten=$((overwritten + 1))
+        echo -e "${GREEN}✔  Overwritten configuration file (with --force): $dst_cfg${RESET}"
+      } || echo -e "${BLUE}📝  Skipped $dst_cfg (use --force to overwrite)${RESET}"
+    else
+      cp "$src_cfg" "$dst_cfg"
+      copied=$((copied + 1))
+      echo -e "${GREEN}✔  Created configuration file: $dst_cfg${RESET}"
+    fi
+  else
+    echo -e "${YELLOW}⚠️  Warning: Template configuration file $src_cfg not found — skipped${RESET}"
+  fi
+done
 
 # 1c. Handle pre-push hooks
 SRC_DIR="$RUST_TEMPLATE_DIR/.git-hooks"
