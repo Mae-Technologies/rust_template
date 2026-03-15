@@ -63,10 +63,13 @@ jobs:
           mkdir -p "$HOME/.local/bin"
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-          # cargo-deny
-          curl -sSfL https://github.com/EmbarkStudios/cargo-deny/releases/latest/download/cargo-deny-x86_64-unknown-linux-musl.tar.gz \
-            | tar -xz --wildcards --strip-components=1 -C "$HOME/.local/bin" '*/cargo-deny'
-          chmod +x "$HOME/.local/bin/cargo-deny"
+          # cargo-binstall (universal cargo binary installer)
+          curl -L --proto '=https' --tlsv1.2 -sSf \
+            https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh \
+            | bash
+
+          # cargo-deny via binstall
+          cargo binstall cargo-deny --no-confirm --quiet
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@nightly
