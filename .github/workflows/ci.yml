@@ -126,22 +126,6 @@ jobs:
       - name: 📦 Restore build cache
         uses: Swatinem/rust-cache@v2
 
-      - name: 🔧 Install yq
-        uses: mikefarah/yq@v4
-
-      - name: Load database config from test.yaml
-        run: |
-          CONFIG=$(yq eval-all 'select(fileIndex == 0) * select(fileIndex == 1)' \
-            configuration/base.yaml configuration/test.yaml 2>/dev/null \
-            || cat configuration/base.yaml)
-          echo "SUPERUSER=$(echo "$CONFIG" | yq '.database_admin.superuser')" >> $GITHUB_ENV
-          echo "SUPERUSER_PWD=$(echo "$CONFIG" | yq '.database_admin.superuser_password')" >> $GITHUB_ENV
-          echo "APP_DB_NAME=$(echo "$CONFIG" | yq '.database_admin.db_name')" >> $GITHUB_ENV
-          echo "MIGRATOR_USER=$(echo "$CONFIG" | yq '.database_admin.migrator_user')" >> $GITHUB_ENV
-          echo "MIGRATOR_PWD=$(echo "$CONFIG" | yq '.database_admin.migrator_password')" >> $GITHUB_ENV
-          echo "APP_USER=$(echo "$CONFIG" | yq '.database_admin.app_user')" >> $GITHUB_ENV
-          echo "APP_USER_PWD=$(echo "$CONFIG" | yq '.database_admin.app_user_password')" >> $GITHUB_ENV
-
       - name: Run integration tests
         env:
           APP_ENVIRONMENT: test
