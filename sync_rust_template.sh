@@ -272,16 +272,18 @@ sync_workflow_file() {
 
 sync_workflow_file "$WORKFLOW_CI_FILE"
 
-# 1c-2. Sync configuration files (always with --force)
+# 1c-2. Sync configuration files (respects --force flag)
 for cfg_file in "${CONFIGURATION_FILES[@]}"; do
   src_cfg="$RUST_TEMPLATE_DIR/$cfg_file"
   dst_cfg="./$cfg_file"
   if [[ -f "$src_cfg" ]]; then
     mkdir -p "$(dirname "$dst_cfg")"
     if [[ -e "$dst_cfg" ]]; then
-      cp "$src_cfg" "$dst_cfg"
-      overwritten=$((overwritten + 1))
-      echo -e "${GREEN}✔  Overwritten configuration file: $dst_cfg${RESET}"
+      $FORCE && {
+        cp "$src_cfg" "$dst_cfg"
+        overwritten=$((overwritten + 1))
+        echo -e "${GREEN}✔  Overwritten configuration file (with --force): $dst_cfg${RESET}"
+      } || echo -e "${BLUE}📝  Skipped $dst_cfg (use --force to overwrite)${RESET}"
     else
       cp "$src_cfg" "$dst_cfg"
       copied=$((copied + 1))
