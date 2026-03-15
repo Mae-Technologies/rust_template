@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   config:
-    name: 📋 Read Config
+    name: 🕵️ Crab Intel
     runs-on: mae-runner
     outputs:
       neo4j_user: ${{ steps.read.outputs.neo4j_user }}
@@ -21,17 +21,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install build dependencies
+      - name: 🔧 Install tools
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y build-essential pkg-config libssl-dev
-
-      - name: Install yq
-        run: |
+          set -euo pipefail
           mkdir -p "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+          # yq
           curl -sSL https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 \
             -o "$HOME/.local/bin/yq" && chmod +x "$HOME/.local/bin/yq"
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+          # trufflehog
+          curl -sSfL https://github.com/trufflesecurity/trufflehog/releases/latest/download/trufflehog_linux_amd64.tar.gz \
+            | tar -xz -C "$HOME/.local/bin" trufflehog
+          chmod +x "$HOME/.local/bin/trufflehog"
 
       - name: Read config
         id: read
@@ -52,10 +55,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install build dependencies
+      - name: 🔧 Install tools
         run: |
+          set -euo pipefail
           sudo apt-get update -qq
           sudo apt-get install -y build-essential pkg-config libssl-dev
+
+          mkdir -p "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+          # cargo-deny
+          curl -sSfL https://github.com/EmbarkStudios/cargo-deny/releases/latest/download/cargo-deny-x86_64-unknown-linux-musl.tar.gz \
+            | tar -xz --wildcards --strip-components=1 -C "$HOME/.local/bin" '*/cargo-deny'
+          chmod +x "$HOME/.local/bin/cargo-deny"
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@nightly
@@ -65,7 +77,6 @@ jobs:
       - name: Install cargo tools
         run: |
           cargo install cargo-llvm-cov --locked 2>/dev/null || true
-          cargo install cargo-deny --locked 2>/dev/null || true
 
       - name: Run smoke test (integrity + unit coverage)
         env:
@@ -109,10 +120,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install build dependencies
+      - name: 🔧 Install tools
         run: |
+          set -euo pipefail
           sudo apt-get update -qq
           sudo apt-get install -y build-essential pkg-config libssl-dev
+
+          mkdir -p "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+          # yq
+          curl -sSL https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 \
+            -o "$HOME/.local/bin/yq" && chmod +x "$HOME/.local/bin/yq"
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@nightly
@@ -121,13 +140,6 @@ jobs:
 
       - name: Install cargo-nextest
         run: cargo install cargo-nextest --locked 2>/dev/null || true
-
-      - name: Install yq
-        run: |
-          mkdir -p "$HOME/.local/bin"
-          curl -sSL https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 \
-            -o "$HOME/.local/bin/yq" && chmod +x "$HOME/.local/bin/yq"
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Load database config from test.yaml
         run: |
