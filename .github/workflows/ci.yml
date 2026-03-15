@@ -12,7 +12,7 @@ permissions:
 jobs:
   config:
     name: 📋 Read Config
-    runs-on: [self-hosted, mae-runner]
+    runs-on: mae-runner
     outputs:
       neo4j_user: ${{ steps.read.outputs.neo4j_user }}
       neo4j_password: ${{ steps.read.outputs.neo4j_password }}
@@ -41,7 +41,7 @@ jobs:
 
   integrity:
     name: 🦀 Ferris Says No Bugs
-    runs-on: [self-hosted, mae-runner]
+    runs-on: mae-runner
     needs: config
     steps:
       - uses: actions/checkout@v4
@@ -63,7 +63,7 @@ jobs:
 
   integration:
     name: ⚙️ Integration Gauntlet
-    runs-on: [self-hosted, mae-runner]
+    runs-on: mae-runner
     needs: [integrity, config]
     env:
       NEO4J_USER: ${{ needs.config.outputs.neo4j_user }}
