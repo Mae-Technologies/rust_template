@@ -11,21 +11,37 @@ permissions:
 
 jobs:
   config:
-    name: 📋 Read Config
-    runs-on: [self-hosted, mae-runner]
+    name: 🎖️ Mission Brief
+    runs-on: mae-runner
     outputs:
       neo4j_user: ${{ steps.read.outputs.neo4j_user }}
       neo4j_password: ${{ steps.read.outputs.neo4j_password }}
       rabbitmq_user: ${{ steps.read.outputs.rabbitmq_user }}
       rabbitmq_password: ${{ steps.read.outputs.rabbitmq_password }}
+      db_superuser: ${{ steps.read.outputs.db_superuser }}
+      db_superuser_pwd: ${{ steps.read.outputs.db_superuser_pwd }}
+      db_name: ${{ steps.read.outputs.db_name }}
+      db_migrator_user: ${{ steps.read.outputs.db_migrator_user }}
+      db_migrator_pwd: ${{ steps.read.outputs.db_migrator_pwd }}
+      db_app_user: ${{ steps.read.outputs.db_app_user }}
+      db_app_user_pwd: ${{ steps.read.outputs.db_app_user_pwd }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Install yq
+      - name: 🔧 Install yq
+        uses: mikefarah/yq@v4
+
+      - name: 🔧 Install trufflehog
         run: |
-          command -v yq >/dev/null 2>&1 || \
-            (curl -sSL https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 \
-              -o /usr/local/bin/yq && chmod +x /usr/local/bin/yq)
+          mkdir -p "$HOME/.local/bin"
+          curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh \
+            | sh -s -- -b "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: 🔍 Secret scan
+        run: trufflehog git file://. --since-commit HEAD~1 --only-verified --fail
 
       - name: Read config
         id: read
@@ -38,23 +54,38 @@ jobs:
           echo "neo4j_password=$(echo "$CONFIG" | yq '.graphdb.password')" >> $GITHUB_OUTPUT
           echo "rabbitmq_user=$(echo "$CONFIG" | yq '.messagebroker.username')" >> $GITHUB_OUTPUT
           echo "rabbitmq_password=$(echo "$CONFIG" | yq '.messagebroker.password')" >> $GITHUB_OUTPUT
+          echo "db_superuser=$(echo "$CONFIG" | yq '.database_admin.superuser')" >> $GITHUB_OUTPUT
+          echo "db_superuser_pwd=$(echo "$CONFIG" | yq '.database_admin.superuser_password')" >> $GITHUB_OUTPUT
+          echo "db_name=$(echo "$CONFIG" | yq '.database_admin.db_name // .database.db_name')" >> $GITHUB_OUTPUT
+          echo "db_migrator_user=$(echo "$CONFIG" | yq '.database_admin.migrator_user')" >> $GITHUB_OUTPUT
+          echo "db_migrator_pwd=$(echo "$CONFIG" | yq '.database_admin.migrator_password')" >> $GITHUB_OUTPUT
+          echo "db_app_user=$(echo "$CONFIG" | yq '.database_admin.app_user')" >> $GITHUB_OUTPUT
+          echo "db_app_user_pwd=$(echo "$CONFIG" | yq '.database_admin.app_user_password')" >> $GITHUB_OUTPUT
 
   integrity:
     name: 🦀 Ferris Says No Bugs
-    runs-on: [self-hosted, mae-runner]
+    runs-on: mae-runner
     needs: config
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@nightly
-        with:
-          components: llvm-tools-preview, rustfmt, clippy
-
-      - name: Install cargo tools
+      - name: 🔧 Install system dependencies
         run: |
-          cargo install cargo-llvm-cov --locked 2>/dev/null || true
-          cargo install cargo-deny --locked 2>/dev/null || true
+          sudo apt-get update -qq
+          sudo apt-get install -y build-essential pkg-config libssl-dev
+
+      - name: 🦀 Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: 📦 Restore build cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: 🔧 Install cargo-deny
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny
 
       - name: Run smoke test (integrity + unit coverage)
         env:
@@ -63,13 +94,20 @@ jobs:
 
   integration:
     name: ⚙️ Integration Gauntlet
-    runs-on: [self-hosted, mae-runner]
+    runs-on: mae-runner
     needs: [integrity, config]
     env:
       NEO4J_USER: ${{ needs.config.outputs.neo4j_user }}
       NEO4J_PASSWORD: ${{ needs.config.outputs.neo4j_password }}
       RABBITMQ_USER: ${{ needs.config.outputs.rabbitmq_user }}
       RABBITMQ_PASSWORD: ${{ needs.config.outputs.rabbitmq_password }}
+      POSTGRES_SUPERUSER: ${{ needs.config.outputs.db_superuser }}
+      POSTGRES_SUPERUSER_PWD: ${{ needs.config.outputs.db_superuser_pwd }}
+      APP_DB_NAME: ${{ needs.config.outputs.db_name }}
+      MIGRATOR_USER: ${{ needs.config.outputs.db_migrator_user }}
+      MIGRATOR_PWD: ${{ needs.config.outputs.db_migrator_pwd }}
+      APP_USER: ${{ needs.config.outputs.db_app_user }}
+      APP_USER_PWD: ${{ needs.config.outputs.db_app_user_pwd }}
     services:
       postgres:
         image: ghcr.io/mae-technologies/postgres-mae:latest
@@ -98,32 +136,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@nightly
-        with:
-          components: llvm-tools-preview
-
-      - name: Install cargo-nextest
-        run: cargo install cargo-nextest --locked 2>/dev/null || true
-
-      - name: Install yq
+      - name: 🔧 Install system dependencies
         run: |
-          command -v yq >/dev/null 2>&1 || \
-            (curl -sSL https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 \
-              -o /usr/local/bin/yq && chmod +x /usr/local/bin/yq)
+          sudo apt-get update -qq
+          sudo apt-get install -y build-essential pkg-config libssl-dev
 
-      - name: Load database config from test.yaml
-        run: |
-          CONFIG=$(yq eval-all 'select(fileIndex == 0) * select(fileIndex == 1)' \
-            configuration/base.yaml configuration/test.yaml 2>/dev/null \
-            || cat configuration/base.yaml)
-          echo "SUPERUSER=$(echo "$CONFIG" | yq '.database_admin.superuser')" >> $GITHUB_ENV
-          echo "SUPERUSER_PWD=$(echo "$CONFIG" | yq '.database_admin.superuser_password')" >> $GITHUB_ENV
-          echo "APP_DB_NAME=$(echo "$CONFIG" | yq '.database_admin.db_name')" >> $GITHUB_ENV
-          echo "MIGRATOR_USER=$(echo "$CONFIG" | yq '.database_admin.migrator_user')" >> $GITHUB_ENV
-          echo "MIGRATOR_PWD=$(echo "$CONFIG" | yq '.database_admin.migrator_password')" >> $GITHUB_ENV
-          echo "APP_USER=$(echo "$CONFIG" | yq '.database_admin.app_user')" >> $GITHUB_ENV
-          echo "APP_USER_PWD=$(echo "$CONFIG" | yq '.database_admin.app_user_password')" >> $GITHUB_ENV
+      - name: 🦀 Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 📦 Restore build cache
+        uses: Swatinem/rust-cache@v2
 
       - name: Run integration tests
         env:
