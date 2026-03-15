@@ -206,6 +206,8 @@ declare -a HEADER_FILES=(
 declare -a DEPRECATED_FILES=(
   ".github/workflows/cooked-crab.yaml"
   ".github/workflows/rust-integrity-guard.yaml"
+  ".ci/ci_tests.sh"
+  ".ci/ci_tests.env"
 )
 
 # ── Pre-check: config files (unless --force) ───────────────────────────
@@ -400,18 +402,6 @@ if [[ -d "$SRC_SCRIPTS_DIR" ]]; then
   done < <(find "$SRC_SCRIPTS_DIR" -type f -print0)
 else
   echo -e "${YELLOW}⚠️  Warning: Template scripts/ directory not found — skipped${RESET}"
-fi
-
-# Cleanup: remove deprecated .ci/ci_tests.env from target if it exists
-if [[ -f ".ci/ci_tests.env" ]]; then
-  rm -f ".ci/ci_tests.env"
-  echo -e "${GREEN}✔  Removed deprecated .ci/ci_tests.env${RESET}"
-fi
-
-# Cleanup: remove deprecated .ci/ci_tests.sh from target if it exists
-if [[ -f ".ci/ci_tests.sh" ]]; then
-  rm -f ".ci/ci_tests.sh"
-  echo -e "${GREEN}✔  Removed deprecated .ci/ci_tests.sh${RESET}"
 fi
 
 # Remove deprecated files
