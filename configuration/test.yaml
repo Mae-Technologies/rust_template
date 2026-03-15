@@ -1,0 +1,6 @@
+database:
+  db_name: "service_test_db"
+
+database_admin:
+  db_name: "service_test_db"
+  superuser_password: "postgres"

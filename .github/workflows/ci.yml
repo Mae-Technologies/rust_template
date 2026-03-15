@@ -6,9 +6,12 @@ on:
       - main
       - production
 
+permissions:
+  contents: read
+
 jobs:
   integrity:
-    name: Integrity & Unit Tests
+    name: 🦀 Ferris Says No Bugs
     runs-on: [self-hosted, mae-runner]
     steps:
       - uses: actions/checkout@v4
@@ -29,7 +32,7 @@ jobs:
         run: bash scripts/smoke-test.sh
 
   integration:
-    name: Integration Tests
+    name: ⚙️ Integration Gauntlet
     runs-on: [self-hosted, mae-runner]
     needs: integrity
     services:
@@ -38,22 +41,6 @@ jobs:
         credentials:
           username: ${{ secrets.GHCR_USERNAME }}
           password: ${{ secrets.GHCR_TOKEN }}
-        env:
-          # Matches docker-compose.yml / configuration/test.yaml values
-          APP_ENV: "test"
-          DB_HOST: "127.0.0.1"
-          DB_PORT: "5432"
-          APP_DB_NAME: "mae_test"
-          SUPERUSER: "postgres"
-          SUPERUSER_PWD: "password"
-          MIGRATOR_USER: "db_migrator"
-          MIGRATOR_PWD: "migrator_secret"
-          APP_USER: "app"
-          APP_USER_PWD: "secret"
-          TABLE_PROVISIONER_USER: "table_provisioner"
-          TABLE_PROVISIONER_PWD: "provisioner_secret"
-          SEARCH_PATH: "app"
-          CONFIRM_IRREVOCABLE_DATABASE_WIPE: "false"
         ports:
           - 5432:5432
       neo4j:
@@ -76,6 +63,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Load config from test.yaml
+        run: |
+          # Parse config — test.yaml overrides base.yaml
+          merge_yaml() {
+            yq eval-all 'select(fileIndex == 0) * select(fileIndex == 1)' \
+              configuration/base.yaml configuration/test.yaml 2>/dev/null \
+              || cat configuration/base.yaml
+          }
+          CONFIG=$(merge_yaml)
+          echo "SUPERUSER=$(echo "$CONFIG" | yq '.database_admin.superuser')" >> $GITHUB_ENV
+          echo "SUPERUSER_PWD=$(echo "$CONFIG" | yq '.database_admin.superuser_password')" >> $GITHUB_ENV
+          echo "APP_DB_NAME=$(echo "$CONFIG" | yq '.database_admin.db_name')" >> $GITHUB_ENV
+          echo "MIGRATOR_USER=$(echo "$CONFIG" | yq '.database_admin.migrator_user')" >> $GITHUB_ENV
+          echo "MIGRATOR_PWD=$(echo "$CONFIG" | yq '.database_admin.migrator_password')" >> $GITHUB_ENV
+          echo "APP_USER=$(echo "$CONFIG" | yq '.database_admin.app_user')" >> $GITHUB_ENV
+          echo "APP_USER_PWD=$(echo "$CONFIG" | yq '.database_admin.app_user_password')" >> $GITHUB_ENV
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@nightly
         with:
@@ -89,4 +93,5 @@ jobs:
           APP_ENVIRONMENT: test
           MAE_TESTCONTAINERS: "0"
           REDIS_URL: redis://localhost:6379
+          CONFIRM_IRREVOCABLE_DATABASE_WIPE: "true"
         run: bash scripts/int-test.sh

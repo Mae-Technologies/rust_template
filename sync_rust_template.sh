@@ -185,8 +185,13 @@ declare -a CONFIG_FILES=(
 )
 
 # Special workflow files
-WORKFLOW_FILE=".github/workflows/cooked-crab.yaml"
 WORKFLOW_CI_FILE=".github/workflows/ci.yml"
+
+# Configuration files (always synced with --force)
+declare -a CONFIGURATION_FILES=(
+  "configuration/base.yaml"
+  "configuration/test.yaml"
+)
 
 # Pre-push hook
 HOOK_DIR=".git-hooks/"
@@ -265,8 +270,27 @@ sync_workflow_file() {
   fi
 }
 
-sync_workflow_file "$WORKFLOW_FILE"
 sync_workflow_file "$WORKFLOW_CI_FILE"
+
+# 1c-2. Sync configuration files (always with --force)
+for cfg_file in "${CONFIGURATION_FILES[@]}"; do
+  src_cfg="$RUST_TEMPLATE_DIR/$cfg_file"
+  dst_cfg="./$cfg_file"
+  if [[ -f "$src_cfg" ]]; then
+    mkdir -p "$(dirname "$dst_cfg")"
+    if [[ -e "$dst_cfg" ]]; then
+      cp "$src_cfg" "$dst_cfg"
+      overwritten=$((overwritten + 1))
+      echo -e "${GREEN}✔  Overwritten configuration file: $dst_cfg${RESET}"
+    else
+      cp "$src_cfg" "$dst_cfg"
+      copied=$((copied + 1))
+      echo -e "${GREEN}✔  Created configuration file: $dst_cfg${RESET}"
+    fi
+  else
+    echo -e "${YELLOW}⚠️  Warning: Template configuration file $src_cfg not found — skipped${RESET}"
+  fi
+done
 
 # 1c. Handle pre-push hooks
 SRC_DIR="$RUST_TEMPLATE_DIR/.git-hooks"
