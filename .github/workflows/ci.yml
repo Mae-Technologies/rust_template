@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   config:
-    name: 🕵️ Crab Intel
+    name: 🎖️ Mission Brief
     runs-on: mae-runner
     outputs:
       neo4j_user: ${{ steps.read.outputs.neo4j_user }}
