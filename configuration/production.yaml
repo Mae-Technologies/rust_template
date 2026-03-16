@@ -1,0 +1,25 @@
+# configuration/production.yaml
+# Provisioned from Vault by ansible k8bootstrap. Do not commit secrets here.
+# Overrides configuration/base.yaml for APP_ENVIRONMENT=production.
+
+application:
+  port: 8080
+  base_url: ""
+  hmac_secret: ""  # vault: secret/mae/production/{service} → hmac_secret
+
+database:
+  host: ""
+  port: "5432"
+  password: ""  # vault: secret/mae/production/{service} → db_password
+  database_name: ""
+  require_ssl: true
+
+redis_uri: ""
+
+# graphdb:
+#   host: ""
+#   port: "7687"
+#   username: "neo4j"
+#   password: ""
+
+custom: {}

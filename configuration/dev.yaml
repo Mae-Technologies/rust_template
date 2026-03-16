@@ -1,0 +1,14 @@
+# configuration/dev.yaml
+# Local developer overrides for APP_ENVIRONMENT=dev.
+# Safe to commit non-secret dev values here; keep passwords out.
+# Overrides configuration/base.yaml for APP_ENVIRONMENT=dev.
+
+# Override only what differs from base.yaml for your local dev setup.
+# All fields are optional — omit to inherit the base.yaml default.
+
+# example:
+# application:
+#   port: 8080
+# database:
+#   host: "localhost"
+#   database_name: "myservice_dev"
