@@ -154,26 +154,48 @@ Triggers on PR to `main` or `production`. Runs four parallel jobs after **Missio
 
 Coverage threshold is read from `.ci/ci_env.toml` (`coverage_threshold` key, default 45%).
 
-#### Required GitHub Secrets
+#### Configuring service-specific secrets
 
-These must be set at the **repository level** (service-specific) or **org level** (global):
+Service-specific host secrets are declared in `.ci/ci_env.toml` — **not** hardcoded in the workflow YAML. The template ships with blank placeholders:
+
+```toml
+env = [
+  "MAE_TESTCONTAINERS=1",
+  "APP_DATABASE__HOST=",
+  "APP_GRAPHDB__HOST="
+]
+```
+
+Before the CI pipeline will pass, fill these in with your GitHub secret references:
+
+```toml
+env = [
+  "MAE_TESTCONTAINERS=1",
+  "APP_DATABASE__HOST=${{ secrets.CI_STAGE_MYSERVICE_POSTGRES_HOST }}",
+  "APP_GRAPHDB__HOST=${{ secrets.CI_STAGE_MYSERVICE_NEO4J_HOST }}"
+]
+```
+
+The CI workflow reads the secret names from this file and injects only those specific secrets (no `toJSON(secrets)` — no mass exposure). A blank value is a hard CI failure with a clear error.
+
+#### Required GitHub Secrets
 
 | Secret | Scope | Maps to |
 |---|---|---|
-| `CI_STAGE_SERVICE_POSTGRES_HOST` | per-repo | `APP_DATABASE__HOST` → `database.host` |
-| `CI_STAGE_SERVICE_NEO4J_HOST` | per-repo | `APP_GRAPHDB__HOST` → `graphdb.host` |
+| `CI_STAGE_<SERVICE>_POSTGRES_HOST` | **per-repo** | `APP_DATABASE__HOST` → `database.host` |
+| `CI_STAGE_<SERVICE>_NEO4J_HOST` | **per-repo** | `APP_GRAPHDB__HOST` → `graphdb.host` |
 | `CI_STAGE_REDIS_URL` | org-global | `APP_REDIS_URI` → `redis_uri` |
 | `CI_STAGE_RABBITMQ_HOST` | org-global | `RABBITMQ_HOST` |
 
 > **config-rs env var naming:** prefix `APP`, prefix_separator `_`, separator `__`.
-> So `APP_DATABASE__HOST` strips `APP_` → `database__host` → `database.host`.
+> `APP_DATABASE__HOST` → strips `APP_` → `database__host` → `database.host`.
 > Flat fields (no `__`): `APP_REDIS_URI` → `redis_uri`.
 
 #### Local development
 
 Running `bash scripts/int-test.sh` (no flags) automatically sets `MAE_TESTCONTAINERS=1` via `.ci/ci_env.toml`, spinning up docker containers for all services. No manual env setup needed.
 
-If running against live staging services instead of containers, set the env vars listed above manually before running the script.
+If `.ci/ci_env.toml` has blank entries, the script warns locally (non-blocking) and CI hard-fails.
 
 ## Pre-Push Hook
 
