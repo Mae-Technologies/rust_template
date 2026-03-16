@@ -144,16 +144,36 @@ Enforces workspace-wide dependency policy:
 
 [read the `cargo-deny` docs](https://embarkstudios.github.io/cargo-deny/checks/bans/cfg.html)
 
-### GitHub Actions CI (`.github/workflows/cooked-crab.yaml`)
+### GitHub Actions CI (`.github/workflows/ci.yml`)
 
-Triggers on push/PR to `main` or `master`. Includes:
+Triggers on PR to `main` or `production`. Runs four parallel jobs after **Mission Brief** (config parsing):
 
-- `cargo +nightly fmt -- --check`
-- `cargo +nightly clippy -- -D warnings -D clippy::undocumented_unsafe_blocks`
-- `cargo +nightly miri test`
-- `cargo deny check`
+- **🔐 Secret Scan** — trufflehog scan of the last commit
+- **🦀 Ferris Says No Bugs** — rustfmt, clippy, llvm-cov coverage, cargo-deny
+- **🔌 Connection Check** → **⚙️ Integration Gauntlet** — connectivity probe then integration tests via `bash scripts/int-test.sh --ci`
 
-Optimizes performance by detecting changed `.rs` files and skipping checks when no Rust code is modified.
+Coverage threshold is read from `.ci/ci_env.toml` (`coverage_threshold` key, default 45%).
+
+#### Required GitHub Secrets
+
+These must be set at the **repository level** (service-specific) or **org level** (global):
+
+| Secret | Scope | Maps to |
+|---|---|---|
+| `CI_STAGE_SERVICE_POSTGRES_HOST` | per-repo | `APP_DATABASE__HOST` → `database.host` |
+| `CI_STAGE_SERVICE_NEO4J_HOST` | per-repo | `APP_GRAPHDB__HOST` → `graphdb.host` |
+| `CI_STAGE_REDIS_URL` | org-global | `APP_REDIS_URI` → `redis_uri` |
+| `CI_STAGE_RABBITMQ_HOST` | org-global | `RABBITMQ_HOST` |
+
+> **config-rs env var naming:** prefix `APP`, prefix_separator `_`, separator `__`.
+> So `APP_DATABASE__HOST` strips `APP_` → `database__host` → `database.host`.
+> Flat fields (no `__`): `APP_REDIS_URI` → `redis_uri`.
+
+#### Local development
+
+Running `bash scripts/int-test.sh` (no flags) automatically sets `MAE_TESTCONTAINERS=1` via `.ci/ci_env.toml`, spinning up docker containers for all services. No manual env setup needed.
+
+If running against live staging services instead of containers, set the env vars listed above manually before running the script.
 
 ## Pre-Push Hook
 

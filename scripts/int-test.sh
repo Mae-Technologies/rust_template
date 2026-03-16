@@ -128,9 +128,12 @@ fi
 # docker containers or set manually.
 if [[ "$CI_MODE" == "false" ]]; then
   MISSING_VARS=()
-  [[ -z "${APP_DATABASE__HOST:-}" ]] && MISSING_VARS+=("APP_DATABASE__HOST  (CI secret: CI_STAGE_WIDGET_SERVICE_POSTGRES_HOST → maps to database.host)")
-  [[ -z "${APP_GRAPHDB__HOST:-}" ]]  && MISSING_VARS+=("APP_GRAPHDB__HOST   (CI secret: CI_STAGE_WIDGET_SERVICE_NEO4J_HOST   → maps to graphdb.host)")
-  [[ -z "${APP_REDIS_URI:-}" ]]      && MISSING_VARS+=("APP_REDIS_URI       (CI secret: CI_STAGE_REDIS_URL                   → maps to redis_uri)")
+  # Service-specific secrets (set per-repo in GitHub):
+  [[ -z "${APP_DATABASE__HOST:-}" ]] && MISSING_VARS+=("APP_DATABASE__HOST  (CI secret: CI_STAGE_SERVICE_POSTGRES_HOST  → maps to database.host)")
+  [[ -z "${APP_GRAPHDB__HOST:-}" ]]  && MISSING_VARS+=("APP_GRAPHDB__HOST   (CI secret: CI_STAGE_SERVICE_NEO4J_HOST    → maps to graphdb.host)")
+  # Global secrets (set at org level in GitHub):
+  [[ -z "${APP_REDIS_URI:-}" ]]      && MISSING_VARS+=("APP_REDIS_URI       (CI secret: CI_STAGE_REDIS_URL             → maps to redis_uri  [global])")
+  [[ -z "${RABBITMQ_HOST:-}" ]]      && MISSING_VARS+=("RABBITMQ_HOST       (CI secret: CI_STAGE_RABBITMQ_HOST         → rabbitmq host      [global])")
 
   if [[ ${#MISSING_VARS[@]} -gt 0 ]]; then
     echo
