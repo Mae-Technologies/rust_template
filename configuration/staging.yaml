@@ -1,0 +1,26 @@
+# configuration/staging.yaml
+# Provisioned from Vault by ansible k8bootstrap. Do not commit secrets here.
+# See: https://github.com/Mae-Technologies/ansible (playbooks/k8s-bootstrap.yml)
+# Overrides configuration/base.yaml for APP_ENVIRONMENT=staging.
+
+application:
+  port: 8080
+  base_url: ""  # staging internal service URL
+  hmac_secret: ""  # vault: secret/mae/staging/{service} → hmac_secret
+
+database:
+  host: ""      # or set via APP_DATABASE__HOST env var
+  port: "5432"
+  password: ""  # vault: secret/mae/staging/{service} → db_password
+  database_name: ""
+  require_ssl: false
+
+redis_uri: ""  # e.g. redis://redis.statbook-cd.svc.cluster.local:6379/{db_index}
+
+# graphdb:  # uncomment if this service uses neo4j
+#   host: ""    # or set via APP_GRAPHDB__HOST env var
+#   port: "7687"
+#   username: "neo4j"
+#   password: "" # vault: secret/mae/staging/{service} → graphdb_password
+
+custom: {}  # service-specific overrides — see configuration/base.yaml for required keys
