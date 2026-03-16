@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   config:
-    name: 🎖️ Mission Brief
+    name: 📚 The Red Book of Westmarch
     runs-on: mae-runner
     outputs:
       neo4j_user: ${{ steps.read.outputs.neo4j_user }}
@@ -70,7 +70,7 @@ jobs:
           echo "db_app_user_pwd=$(echo "$CONFIG" | yq '.database_admin.app_user_pwd')" >> $GITHUB_OUTPUT
 
   smoke_check:
-    name: "🔌 Connection Check"
+    name: 🏰 Allies Gather at Rivendell
     runs-on: mae-runner
     needs: config
     steps:
@@ -136,7 +136,7 @@ jobs:
           echo "✅ Neo4j bolt reachable"
 
   secret_scan:
-    name: 🔐 Secret Scan
+    name: 🛡️ Watchers of the Gate
     runs-on: mae-runner
     needs: config
     steps:
@@ -167,7 +167,7 @@ jobs:
         run: trufflehog git file://. --since-commit HEAD~1 --only-verified --fail
 
   integrity:
-    name: 🦀 Ferris Says No Bugs
+    name: 🏔️ Through the Mines of Moria
     runs-on: mae-runner
     needs: config
     env:
@@ -230,7 +230,7 @@ jobs:
         run: cargo deny check
 
   integration:
-    name: ⚙️ Integration Gauntlet
+    name: ⚔️ The Battle of Helm's Deep
     runs-on: mae-runner
     needs: [smoke_check, config]
     env:
