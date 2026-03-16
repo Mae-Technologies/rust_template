@@ -212,9 +212,7 @@ jobs:
       # (set at org/repo level — see PR description for required values)
       # config-rs prefix_separator("_") + separator("__"): strip "APP_" then split on "__"
       # e.g. APP_DATABASE__HOST → database.host, APP_REDIS_URI → redis_uri (flat field)
-      APP_DATABASE__HOST: ${{ secrets.CI_STAGE_SERVICE_POSTGRES_HOST }}
       APP_DATABASE__PORT: "5432"
-      APP_GRAPHDB__HOST: ${{ secrets.CI_STAGE_SERVICE_NEO4J_HOST }}
       APP_GRAPHDB__PORT: "7687"
       APP_REDIS_URI: ${{ secrets.CI_STAGE_REDIS_URL }}
       RABBITMQ_HOST: ${{ secrets.CI_STAGE_RABBITMQ_HOST }}
@@ -239,6 +237,42 @@ jobs:
 
       - name: 📦 Restore build cache
         uses: Swatinem/rust-cache@v2
+
+      - name: 🔐 Resolve service secrets from ci_env.toml
+        env:
+          ALL_SECRETS: ${{ toJSON(secrets) }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re, tomllib, sys
+
+          secrets = json.loads(os.environ.get('ALL_SECRETS', '{}'))
+          cfg = tomllib.loads(open('.ci/ci_env.toml', 'rb').read())
+          pattern = re.compile(r'^\$\{\{\s*secrets\.(\w+)\s*\}\}$')
+          github_env = os.environ['GITHUB_ENV']
+
+          errors = []
+          with open(github_env, 'a') as f:
+              for kv in cfg.get('env', []):
+                  if '=' not in kv:
+                      continue
+                  key, val = kv.split('=', 1)
+                  val = val.strip()
+                  m = pattern.match(val)
+                  if m:
+                      secret_name = m.group(1)
+                      resolved = secrets.get(secret_name, '')
+                      if not resolved:
+                          errors.append(f"{key}: secret '{secret_name}' not found in repo/org secrets")
+                      else:
+                          f.write(f"{key}={resolved}\n")
+                  elif val == '':
+                      errors.append(f"{key}: blank value in ci_env.toml — set to a secret reference")
+
+          if errors:
+              for e in errors:
+                  print(f'::error::{e}')
+              sys.exit(1)
+          PY
 
       - name: Run integration tests
         env:

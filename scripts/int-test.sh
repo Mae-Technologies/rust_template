@@ -111,6 +111,12 @@ if [[ -n "$ENV_VARS" ]]; then
       err "❌ ERROR: invalid env entry '$kv' (expected KEY=VALUE)"
       exit 1
     fi
+    # Skip GitHub Actions secret references — resolved by CI workflow before this script runs
+    # Locally these are not resolvable; missing vars are caught by the warning block below
+    if [[ "$kv" == *'${{ secrets.'* ]]; then
+      info "   ↷ ${kv%%=*} (CI secret — resolved by workflow)"
+      continue
+    fi
     export "$kv"
     info "   ${kv%%=*}=${kv#*=}"
   done <<< "$ENV_VARS"
