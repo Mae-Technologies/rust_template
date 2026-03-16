@@ -129,27 +129,28 @@ if [[ "$CI_MODE" == "true" ]]; then
   unset MAE_TESTCONTAINERS
 fi
 
-# Warn local developers about external service env vars.
-# In CI these are injected via GitHub secrets; locally they may be provided by
-# docker containers or set manually.
+# Warn local developers if .ci/ci_env.toml has blank service-specific entries.
+# Blank entries mean the service hasn't configured its CI secrets yet.
+# In CI the resolve step hard-fails on blank entries — locally we just warn.
 if [[ "$CI_MODE" == "false" ]]; then
-  MISSING_VARS=()
-  # Service-specific secrets (set per-repo in GitHub):
-  [[ -z "${APP_DATABASE__HOST:-}" ]] && MISSING_VARS+=("APP_DATABASE__HOST  (CI secret: CI_STAGE_SERVICE_POSTGRES_HOST  → maps to database.host)")
-  [[ -z "${APP_GRAPHDB__HOST:-}" ]]  && MISSING_VARS+=("APP_GRAPHDB__HOST   (CI secret: CI_STAGE_SERVICE_NEO4J_HOST    → maps to graphdb.host)")
-  # Global secrets (set at org level in GitHub):
-  [[ -z "${APP_REDIS_URI:-}" ]]      && MISSING_VARS+=("APP_REDIS_URI       (CI secret: CI_STAGE_REDIS_URL             → maps to redis_uri  [global])")
-  [[ -z "${RABBITMQ_HOST:-}" ]]      && MISSING_VARS+=("RABBITMQ_HOST       (CI secret: CI_STAGE_RABBITMQ_HOST         → rabbitmq host      [global])")
-
-  if [[ ${#MISSING_VARS[@]} -gt 0 ]]; then
+  BLANK_KEYS="$(python3 - "$CFG_FILE" <<'PY'
+import tomllib, sys
+cfg = tomllib.loads(open(sys.argv[1], 'rb').read())
+blank = [kv.split('=')[0] for kv in cfg.get('env', [])
+         if '=' in kv and not kv.split('=', 1)[1].strip()]
+print('\n'.join(blank))
+PY
+)"
+  if [[ -n "$BLANK_KEYS" ]]; then
     echo
-    warn "⚠️  The following env vars are not set:"
-    for v in "${MISSING_VARS[@]}"; do
-      warn "   • $v"
-    done
+    warn "⚠️  The following entries in .ci/ci_env.toml have blank values:"
+    while IFS= read -r key; do
+      [[ -z "$key" ]] && continue
+      warn "   • $key — update .ci/ci_env.toml to: $key=\${{ secrets.YOUR_SECRET_NAME }}"
+    done <<< "$BLANK_KEYS"
     warn ""
-    warn "   In CI these are injected automatically via GitHub secrets."
-    warn "   Locally, tests may still pass if docker containers provide the services."
+    warn "   CI will hard-fail until these are configured."
+    warn "   Locally, docker containers may still provide the services."
     echo
   fi
 fi

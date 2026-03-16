@@ -73,10 +73,47 @@ jobs:
     name: "🔌 Connection Check"
     runs-on: mae-runner
     needs: config
-    env:
-      POSTGRES_HOST: ${{ secrets.CI_STAGE_SERVICE_POSTGRES_HOST }}
-      NEO4J_HOST: ${{ secrets.CI_STAGE_SERVICE_NEO4J_HOST }}
     steps:
+      - uses: actions/checkout@v4
+
+      - name: 📋 Read service secret names from ci_env.toml
+        id: svc_config
+        run: |
+          python3 - <<'PY'
+          import tomllib, re, os, sys
+
+          cfg = tomllib.loads(open('.ci/ci_env.toml', 'rb').read())
+          pattern = re.compile(r'^\$\{\{\s*secrets\.(\w+)\s*\}\}$')
+          blank = []
+
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as out:
+              for kv in cfg.get('env', []):
+                  if '=' not in kv:
+                      continue
+                  key, val = kv.split('=', 1)
+                  val = val.strip()
+                  m = pattern.match(val)
+                  if m:
+                      # derive a predictable output key from the env var name
+                      out_key = key.lower().replace('app_', '').replace('__', '_') + '_secret'
+                      out.write(f"{out_key}={m.group(1)}\n")
+                  elif not val:
+                      blank.append(key)
+
+          if blank:
+              for k in blank:
+                  print(f"::error::ci_env.toml: '{k}' has a blank value — set to ${{{{ secrets.YOUR_SECRET_NAME }}}}")
+              sys.exit(1)
+          PY
+
+      - name: 🔐 Inject service secrets
+        env:
+          POSTGRES_HOST: ${{ secrets[steps.svc_config.outputs.database_host_secret] }}
+          NEO4J_HOST: ${{ secrets[steps.svc_config.outputs.graphdb_host_secret] }}
+        run: |
+          echo "POSTGRES_HOST=$POSTGRES_HOST" >> "$GITHUB_ENV"
+          echo "NEO4J_HOST=$NEO4J_HOST" >> "$GITHUB_ENV"
+
       - name: 🔧 Install connection tools
         run: |
           echo "::group::Installing connection tools"
@@ -238,20 +275,17 @@ jobs:
       - name: 📦 Restore build cache
         uses: Swatinem/rust-cache@v2
 
-      - name: 🔐 Resolve service secrets from ci_env.toml
-        env:
-          ALL_SECRETS: ${{ toJSON(secrets) }}
+      - name: 📋 Read service secret names from ci_env.toml
+        id: svc_config
         run: |
           python3 - <<'PY'
-          import json, os, re, tomllib, sys
+          import tomllib, re, os, sys
 
-          secrets = json.loads(os.environ.get('ALL_SECRETS', '{}'))
           cfg = tomllib.loads(open('.ci/ci_env.toml', 'rb').read())
           pattern = re.compile(r'^\$\{\{\s*secrets\.(\w+)\s*\}\}$')
-          github_env = os.environ['GITHUB_ENV']
+          blank = []
 
-          errors = []
-          with open(github_env, 'a') as f:
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as out:
               for kv in cfg.get('env', []):
                   if '=' not in kv:
                       continue
@@ -259,20 +293,24 @@ jobs:
                   val = val.strip()
                   m = pattern.match(val)
                   if m:
-                      secret_name = m.group(1)
-                      resolved = secrets.get(secret_name, '')
-                      if not resolved:
-                          errors.append(f"{key}: secret '{secret_name}' not found in repo/org secrets")
-                      else:
-                          f.write(f"{key}={resolved}\n")
-                  elif val == '':
-                      errors.append(f"{key}: blank value in ci_env.toml — set to a secret reference")
+                      out_key = key.lower().replace('app_', '').replace('__', '_') + '_secret'
+                      out.write(f"{out_key}={m.group(1)}\n")
+                  elif not val:
+                      blank.append(key)
 
-          if errors:
-              for e in errors:
-                  print(f'::error::{e}')
+          if blank:
+              for k in blank:
+                  print(f"::error::ci_env.toml: '{k}' has a blank value — set to ${{{{ secrets.YOUR_SECRET_NAME }}}}")
               sys.exit(1)
           PY
+
+      - name: 🔐 Inject service secrets
+        env:
+          APP_DATABASE__HOST: ${{ secrets[steps.svc_config.outputs.database_host_secret] }}
+          APP_GRAPHDB__HOST: ${{ secrets[steps.svc_config.outputs.graphdb_host_secret] }}
+        run: |
+          echo "APP_DATABASE__HOST=$APP_DATABASE__HOST" >> "$GITHUB_ENV"
+          echo "APP_GRAPHDB__HOST=$APP_GRAPHDB__HOST" >> "$GITHUB_ENV"
 
       - name: Run integration tests
         env:
