@@ -102,7 +102,7 @@ jobs:
 
           if blank:
               for k in blank:
-                  print(f"::error::ci_env.toml: '{k}' has a blank value — set to ${{{{ secrets.YOUR_SECRET_NAME }}}}")
+                  print(f"::error::ci_env.toml: '{k}' is blank — set a secret reference in .ci/ci_env.toml before merging")
               sys.exit(1)
           PY
 
@@ -300,7 +300,7 @@ jobs:
 
           if blank:
               for k in blank:
-                  print(f"::error::ci_env.toml: '{k}' has a blank value — set to ${{{{ secrets.YOUR_SECRET_NAME }}}}")
+                  print(f"::error::ci_env.toml: '{k}' is blank — set a secret reference in .ci/ci_env.toml before merging")
               sys.exit(1)
           PY
 
