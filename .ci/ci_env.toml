@@ -8,4 +8,4 @@ coverage_threshold = 45
 
 engine = "nextest"
 env = ["MAE_TESTCONTAINERS=1"]
-flags = ["--no-pager", "--all-features", "--run-ignored", "all", "--no-tests=warn"]
+flags = ["--no-pager", "--features", "integration-testing", "--all-features", "--run-ignored", "all"]

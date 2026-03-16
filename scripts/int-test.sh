@@ -33,6 +33,17 @@ step()    { echo "${BLUE}▶${RESET} ${BOLD}$*${RESET}"; }
 # 🧪 Integration Test Runner
 ########################################
 
+# Parse --ci flag: when running in CI, unset MAE_TESTCONTAINERS so docker-gated
+# tests (#[mae_test(docker)]) are compiled without the env var and skip at runtime.
+# Developers run the script without this flag — ci_env.toml sets MAE_TESTCONTAINERS=1
+# automatically so containers spin up with no extra setup required.
+CI_MODE=false
+for arg in "$@"; do
+  if [[ "$arg" == "--ci" ]]; then
+    CI_MODE=true
+  fi
+done
+
 section "Integration Tests"
 step "Reading configuration from .ci/ci_env.toml"
 
@@ -103,6 +114,35 @@ if [[ -n "$ENV_VARS" ]]; then
     export "$kv"
     info "   ${kv%%=*}=${kv#*=}"
   done <<< "$ENV_VARS"
+fi
+
+# In CI mode, unset MAE_TESTCONTAINERS so docker-gated tests are compiled without
+# the env var — option_env!() will see None, and those tests skip early.
+if [[ "$CI_MODE" == "true" ]]; then
+  step "--ci mode: unsetting MAE_TESTCONTAINERS (docker-gated tests will skip)"
+  unset MAE_TESTCONTAINERS
+fi
+
+# Warn local developers about external service env vars.
+# In CI these are injected via GitHub secrets; locally they may be provided by
+# docker containers or set manually.
+if [[ "$CI_MODE" == "false" ]]; then
+  MISSING_VARS=()
+  [[ -z "${APP_DATABASE__HOST:-}" ]] && MISSING_VARS+=("APP_DATABASE__HOST  (CI secret: CI_STAGE_WIDGET_SERVICE_POSTGRES_HOST → maps to database.host)")
+  [[ -z "${APP_GRAPHDB__HOST:-}" ]]  && MISSING_VARS+=("APP_GRAPHDB__HOST   (CI secret: CI_STAGE_WIDGET_SERVICE_NEO4J_HOST   → maps to graphdb.host)")
+  [[ -z "${APP_REDIS_URI:-}" ]]      && MISSING_VARS+=("APP_REDIS_URI       (CI secret: CI_STAGE_REDIS_URL                   → maps to redis_uri)")
+
+  if [[ ${#MISSING_VARS[@]} -gt 0 ]]; then
+    echo
+    warn "⚠️  The following env vars are not set:"
+    for v in "${MISSING_VARS[@]}"; do
+      warn "   • $v"
+    done
+    warn ""
+    warn "   In CI these are injected automatically via GitHub secrets."
+    warn "   Locally, tests may still pass if docker containers provide the services."
+    echo
+  fi
 fi
 
 # Build flags array
