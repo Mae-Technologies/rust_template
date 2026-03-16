@@ -82,7 +82,7 @@ jobs:
           python3 - <<'PY'
           import tomllib, re, os, sys
 
-          cfg = tomllib.loads(open('.ci/ci_env.toml', 'rb').read())
+          cfg = tomllib.load(open('.ci/ci_env.toml', 'rb'))
           pattern = re.compile(r'^\$\{\{\s*secrets\.(\w+)\s*\}\}$')
           blank = []
 
@@ -281,7 +281,7 @@ jobs:
           python3 - <<'PY'
           import tomllib, re, os, sys
 
-          cfg = tomllib.loads(open('.ci/ci_env.toml', 'rb').read())
+          cfg = tomllib.load(open('.ci/ci_env.toml', 'rb'))
           pattern = re.compile(r'^\$\{\{\s*secrets\.(\w+)\s*\}\}$')
           blank = []
 

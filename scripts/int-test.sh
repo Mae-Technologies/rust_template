@@ -135,7 +135,7 @@ fi
 if [[ "$CI_MODE" == "false" ]]; then
   BLANK_KEYS="$(python3 - "$CFG_FILE" <<'PY'
 import tomllib, sys
-cfg = tomllib.loads(open(sys.argv[1], 'rb').read())
+cfg = tomllib.load(open(sys.argv[1], 'rb'))
 blank = [kv.split('=')[0] for kv in cfg.get('env', [])
          if '=' in kv and not kv.split('=', 1)[1].strip()]
 print('\n'.join(blank))
