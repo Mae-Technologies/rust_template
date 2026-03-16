@@ -76,40 +76,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: 📋 Read service secret names from ci_env.toml
-        id: svc_config
-        run: |
-          python3 - <<'PY'
-          import tomllib, re, os, sys
-
-          cfg = tomllib.load(open('.ci/ci_env.toml', 'rb'))
-          pattern = re.compile(r'^\$\{\{\s*secrets\.(\w+)\s*\}\}$')
-          blank = []
-
-          with open(os.environ['GITHUB_OUTPUT'], 'a') as out:
-              for kv in cfg.get('env', []):
-                  if '=' not in kv:
-                      continue
-                  key, val = kv.split('=', 1)
-                  val = val.strip()
-                  m = pattern.match(val)
-                  if m:
-                      # derive a predictable output key from the env var name
-                      out_key = key.lower().replace('app_', '').replace('__', '_') + '_secret'
-                      out.write(f"{out_key}={m.group(1)}\n")
-                  elif not val:
-                      blank.append(key)
-
-          if blank:
-              for k in blank:
-                  print(f"::error::ci_env.toml: '{k}' is blank — set a secret reference in .ci/ci_env.toml before merging")
-              sys.exit(1)
-          PY
-
       - name: 🔐 Inject service secrets
         env:
-          POSTGRES_HOST: ${{ secrets[steps.svc_config.outputs.database_host_secret] }}
-          NEO4J_HOST: ${{ secrets[steps.svc_config.outputs.graphdb_host_secret] }}
+          POSTGRES_HOST: ${{ secrets.CI_STAGE_SERVICE_POSTGRES_HOST }}
+          NEO4J_HOST: ${{ secrets.CI_STAGE_SERVICE_NEO4J_HOST }}
         run: |
           echo "POSTGRES_HOST=$POSTGRES_HOST" >> "$GITHUB_ENV"
           echo "NEO4J_HOST=$NEO4J_HOST" >> "$GITHUB_ENV"
@@ -251,8 +221,8 @@ jobs:
       # e.g. APP_DATABASE__HOST → database.host, APP_REDIS_URI → redis_uri (flat field)
       APP_DATABASE__PORT: "5432"
       APP_GRAPHDB__PORT: "7687"
-      APP_REDIS_URI: ${{ secrets.CI_STAGE_REDIS_URL }}
-      RABBITMQ_HOST: ${{ secrets.CI_STAGE_RABBITMQ_HOST }}
+      APP_REDIS_URI: ${{ secrets.CI_REDIS_URL }}
+      RABBITMQ_HOST: ${{ secrets.CI_RABBITMQ_HOST }}
       RABBITMQ_PORT: "5672"
     steps:
       - uses: actions/checkout@v4
@@ -275,39 +245,10 @@ jobs:
       - name: 📦 Restore build cache
         uses: Swatinem/rust-cache@v2
 
-      - name: 📋 Read service secret names from ci_env.toml
-        id: svc_config
-        run: |
-          python3 - <<'PY'
-          import tomllib, re, os, sys
-
-          cfg = tomllib.load(open('.ci/ci_env.toml', 'rb'))
-          pattern = re.compile(r'^\$\{\{\s*secrets\.(\w+)\s*\}\}$')
-          blank = []
-
-          with open(os.environ['GITHUB_OUTPUT'], 'a') as out:
-              for kv in cfg.get('env', []):
-                  if '=' not in kv:
-                      continue
-                  key, val = kv.split('=', 1)
-                  val = val.strip()
-                  m = pattern.match(val)
-                  if m:
-                      out_key = key.lower().replace('app_', '').replace('__', '_') + '_secret'
-                      out.write(f"{out_key}={m.group(1)}\n")
-                  elif not val:
-                      blank.append(key)
-
-          if blank:
-              for k in blank:
-                  print(f"::error::ci_env.toml: '{k}' is blank — set a secret reference in .ci/ci_env.toml before merging")
-              sys.exit(1)
-          PY
-
       - name: 🔐 Inject service secrets
         env:
-          APP_DATABASE__HOST: ${{ secrets[steps.svc_config.outputs.database_host_secret] }}
-          APP_GRAPHDB__HOST: ${{ secrets[steps.svc_config.outputs.graphdb_host_secret] }}
+          APP_DATABASE__HOST: ${{ secrets.CI_STAGE_SERVICE_POSTGRES_HOST }}
+          APP_GRAPHDB__HOST: ${{ secrets.CI_STAGE_SERVICE_NEO4J_HOST }}
         run: |
           echo "APP_DATABASE__HOST=$APP_DATABASE__HOST" >> "$GITHUB_ENV"
           echo "APP_GRAPHDB__HOST=$APP_GRAPHDB__HOST" >> "$GITHUB_ENV"
