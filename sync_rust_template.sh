@@ -182,6 +182,9 @@ declare -a CONFIG_FILES=(
   "rust-toolchain.toml"
   "rustfmt.toml"
   ".gitignore"
+  "Dockerfile.dev"
+  ".dockerignore"
+  "scripts/boot.sh"
 )
 
 # Special workflow files
