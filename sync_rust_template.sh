@@ -182,6 +182,8 @@ declare -a CONFIG_FILES=(
   "rust-toolchain.toml"
   "rustfmt.toml"
   ".gitignore"
+  "configuration/base.yaml"
+  "configuration/test.yaml"
 )
 
 # Special workflow file
@@ -229,6 +231,7 @@ for file in "${CONFIG_FILES[@]}"; do
     echo -e "${YELLOW}⚠️  Warning: $src missing — skipped${RESET}"
     continue
   }
+  mkdir -p "$(dirname "$dst")"
   if [[ -e "$dst" ]]; then
     $FORCE && {
       cp "$src" "$dst"
