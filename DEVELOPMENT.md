@@ -559,3 +559,35 @@ echo 'alias rust-sync="sync-rust-template --force"' >> ~/.zshrc
 ```
 
 Enjoy consistent, production-grade Rust tooling and integrity checks across all your projects! 🚀
+
+---
+
+## Local Dev with Docker Compose Watch
+
+This template includes a fast local development loop powered by **Docker Compose Watch** and **cargo-watch** inside a dev container.
+
+### How it works
+
+- `Dockerfile.dev` pre-cooks dependencies using **cargo-chef**, so they are cached as a Docker layer and only rebuilt when `Cargo.lock` changes.
+- `scripts/boot.sh` runs **cargo-watch** inside the container, watching `src/` and `Cargo.toml` for changes and automatically triggering an incremental recompile + restart.
+- The `develop.watch` config in your compose file syncs host-side file changes into the running container via **Docker Compose Watch**.
+
+### Starting the dev environment
+
+```bash
+docker compose up --watch
+```
+
+File changes in `src/` are synced into the container automatically. cargo-watch detects the sync and triggers an incremental recompile + restart.
+
+### Expected cycle times
+
+| Change type | Expected time |
+|---|---|
+| Source file (`src/`) | ~5–30s (incremental recompile) |
+| `Cargo.toml` | ~5–30s (incremental recompile) |
+| `Cargo.lock` (dep change) | ~2–5 min (full image rebuild) |
+
+### Syncing dev files to a service repo
+
+`Dockerfile.dev`, `scripts/boot.sh`, and `.dockerignore` are distributed to service repos via `sync-rust-template`. Run it from any service repo root to pick up the latest dev workflow files.

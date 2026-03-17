@@ -182,10 +182,17 @@ declare -a CONFIG_FILES=(
   "rust-toolchain.toml"
   "rustfmt.toml"
   ".gitignore"
+  "Dockerfile.dev"
+  ".dockerignore"
+  "scripts/dev-boot.sh"
 )
 
 # Special workflow files
+# Source lives in github/ (no dot) in the template repo so GitHub does not
+# trigger workflows on rust_template itself. The sync script writes to the
+# standard .github/ path in each target service repo.
 WORKFLOW_CI_FILE=".github/workflows/ci.yml"
+WORKFLOW_CI_FILE_SRC="github/workflows/ci.yml"
 
 # Configuration files (always synced with --force)
 declare -a CONFIGURATION_FILES=(
@@ -256,8 +263,10 @@ for file in "${CONFIG_FILES[@]}"; do
 done
 
 # 1b. Handle workflow files
+# $1 = destination path (e.g. .github/workflows/ci.yml)
+# $2 = source path in template repo (e.g. github/workflows/ci.yml)
 sync_workflow_file() {
-  local src_wf="$RUST_TEMPLATE_DIR/$1"
+  local src_wf="$RUST_TEMPLATE_DIR/${2:-$1}"
   local dst_wf="./$1"
   if [[ -f "$src_wf" ]]; then
     mkdir -p "$(dirname "$dst_wf")"
@@ -279,7 +288,7 @@ sync_workflow_file() {
   fi
 }
 
-sync_workflow_file "$WORKFLOW_CI_FILE"
+sync_workflow_file "$WORKFLOW_CI_FILE" "$WORKFLOW_CI_FILE_SRC"
 
 # 1c-2. Sync configuration files (respects --force flag)
 for cfg_file in "${CONFIGURATION_FILES[@]}"; do
