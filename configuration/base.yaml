@@ -1,0 +1,30 @@
+# Base configuration — shared across all environments.
+# Environment-specific overrides live in test.yaml, staging.yaml, production.yaml.
+# Individual values can be overridden via env vars: APP_GRAPHDB__HOST, APP_GRAPHDB__PORT, etc.
+
+application:
+  host: "0.0.0.0"
+  port: 8080
+  base_url: "http://127.0.0.1:8080"
+  hmac_secret: "super-secret-hmac-key-change-me-in-production"
+
+database:
+  host: "localhost"
+  port: "5432"
+  username: "app"
+  password: "secret"
+  database_name: "app_db"
+  require_ssl: false
+
+redis_uri: "redis://127.0.0.1:6379"
+
+# Graph database (Neo4j).
+# ⚠️  In production, override via env vars or Vault-injected secrets:
+#   APP_GRAPHDB__HOST, APP_GRAPHDB__PORT, APP_GRAPHDB__USERNAME, APP_GRAPHDB__PASSWORD
+# mae will raise a hard error if running in production with fallback defaults
+# (host=localhost, password=testpassword).
+graphdb:
+  host: "localhost"
+  port: "7687"
+  username: "neo4j"
+  password: "testpassword"

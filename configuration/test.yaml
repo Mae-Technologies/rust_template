@@ -1,0 +1,23 @@
+# Test environment — used when APP_ENVIRONMENT=test.
+# Overrides base.yaml for integration tests.
+
+application:
+  host: "127.0.0.1"
+  port: 0  # ephemeral port for parallel test execution
+  base_url: "http://127.0.0.1:0"
+
+database:
+  host: "127.0.0.1"
+  port: "5432"
+  username: "app"
+  password: "secret"
+  database_name: "app_db_test"
+  require_ssl: false
+
+redis_uri: "redis://127.0.0.1:6379"
+
+graphdb:
+  host: "localhost"
+  port: "7687"
+  username: "neo4j"
+  password: "testpassword"
