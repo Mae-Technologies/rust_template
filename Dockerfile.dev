@@ -15,4 +15,4 @@ RUN cargo chef cook --recipe-path recipe.json
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 # Source is mounted at runtime via Docker Compose Watch
 COPY . .
-CMD ["./scripts/boot.sh"]
+CMD ["./scripts/dev-boot.sh"]
