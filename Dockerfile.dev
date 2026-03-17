@@ -1,0 +1,18 @@
+FROM rust:1 AS chef
+RUN cargo install cargo-chef
+WORKDIR /app
+
+FROM chef AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+
+FROM chef AS dev
+RUN cargo install cargo-watch
+# Pre-cook dependencies — this layer is cached until Cargo.lock changes
+COPY --from=planner /app/recipe.json recipe.json
+RUN cargo chef cook --recipe-path recipe.json
+# Install curl (used by healthcheck)
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+# Source is mounted at runtime via Docker Compose Watch
+COPY . .
+CMD ["./scripts/boot.sh"]
