@@ -16,6 +16,12 @@ database:
 
 redis_uri: "redis://127.0.0.1:6379"
 
+messagebroker:
+  host: "localhost"
+  port: "5672"
+  username: "guest"
+  password: "guest"
+
 graphdb:
   host: "localhost"
   port: "7687"

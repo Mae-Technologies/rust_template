@@ -23,6 +23,19 @@ redis_uri: "redis://127.0.0.1:6379"
 #   APP_GRAPHDB__HOST, APP_GRAPHDB__PORT, APP_GRAPHDB__USERNAME, APP_GRAPHDB__PASSWORD
 # mae will raise a hard error if running in production with fallback defaults
 # (host=localhost, password=testpassword).
+# Message broker (RabbitMQ).
+# Override in production: APP_MESSAGEBROKER__HOST, APP_MESSAGEBROKER__USERNAME, APP_MESSAGEBROKER__PASSWORD
+messagebroker:
+  host: "localhost"
+  port: "5672"
+  username: "guest"
+  password: "guest"
+
+# Graph database (Neo4j).
+# ⚠️  In production, override via env vars or Vault-injected secrets:
+#   APP_GRAPHDB__HOST, APP_GRAPHDB__PORT, APP_GRAPHDB__USERNAME, APP_GRAPHDB__PASSWORD
+# mae will raise a hard error if running in production with fallback defaults
+# (host=localhost, password=testpassword).
 graphdb:
   host: "localhost"
   port: "7687"
