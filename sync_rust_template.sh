@@ -184,7 +184,7 @@ declare -a CONFIG_FILES=(
   ".gitignore"
   "Dockerfile.dev"
   ".dockerignore"
-  "scripts/boot.sh"
+  "scripts/dev-boot.sh"
 )
 
 # Special workflow files
