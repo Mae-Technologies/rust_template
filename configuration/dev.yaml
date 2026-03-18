@@ -1,14 +1,19 @@
 # configuration/dev.yaml
-# Local developer overrides for APP_ENVIRONMENT=dev.
-# Safe to commit non-secret dev values here; keep passwords out.
-# Overrides configuration/base.yaml for APP_ENVIRONMENT=dev.
+# Local developer overrides when running services under compose_ru_statbook.
+# These defaults assume the docker-compose.yml in Mae-Technologies/compose_ru_statbook:
+#   - shared Redis service named `redis`
+#   - shared RabbitMQ service named `rabbitmq`
+# Service-specific Postgres/Neo4j hosts (e.g. `postgres-accounting`, `neo4j-accounting`)
+# should be provided via environment variables per service, or overridden in the
+# service's own configuration/dev.yaml after syncing from this template.
 
-# Override only what differs from base.yaml for your local dev setup.
-# All fields are optional — omit to inherit the base.yaml default.
+application:
+  host: "0.0.0.0"
 
-# example:
-# application:
-#   port: 8080
-# database:
-#   host: "localhost"
-#   database_name: "myservice_dev"
+# Shared Redis instance
+redis_uri: "redis://redis:6379/1"
+
+# Shared RabbitMQ instance
+messagebroker:
+  host: "rabbitmq"
+  port: "5672"
