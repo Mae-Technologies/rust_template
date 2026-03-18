@@ -15,6 +15,7 @@ RESET="\033[0m"
 
 FORCE=false
 TEST=false
+LIB=false
 NAME="" # Optional default name for MIT license
 LICENSE_NAME=""
 PRIVATE_NAME=""
@@ -60,12 +61,17 @@ while [[ $# -gt 0 ]]; do
       shift
     fi
     ;;
+  --lib)
+    LIB=true
+    shift
+    ;;
   --help | -h)
-    echo -e "${BLUE}⏱  Usage: $(basename "$0") [--force] [--private NAME] [--name NAME]${RESET}"
+    echo -e "${BLUE}⏱  Usage: $(basename "$0") [--force] [--private NAME] [--name NAME] [--lib]${RESET}"
     echo
     echo "  --force       Overwrite existing config files and docs"
     echo "  --private     Provide a name to generate a proprietary LICENSE file"
     echo "  --name        Optional name for MIT license if --private not used"
+    echo "  --lib         Treat target as a library crate (skip Dockerfile.* sync)"
     echo
     exit 0
     ;;
@@ -182,6 +188,11 @@ declare -a CONFIG_FILES=(
   "rust-toolchain.toml"
   "rustfmt.toml"
   ".gitignore"
+)
+
+# Service-only Dockerfiles (skipped when --lib is used)
+declare -a SERVICE_DOCKER_FILES=(
+  "Dockerfile.dev"
 )
 
 # Special workflow file
@@ -352,7 +363,35 @@ else
   echo -e "${BLUE}📝  Note: ${cargo_conf} already has git-fetch-with-cli → skipping${RESET}"
 fi
 
-# 3. Handle README.md
+# 3. Sync service Dockerfiles (skipped when --lib is used)
+if ! $LIB; then
+  for docker_file in "${SERVICE_DOCKER_FILES[@]}"; do
+    src_docker="$RUST_TEMPLATE_DIR/$docker_file"
+    dst_docker="./$docker_file"
+
+    if [[ -f "$src_docker" ]]; then
+      if [[ -e "$dst_docker" ]]; then
+        if $FORCE; then
+          cp "$src_docker" "$dst_docker"
+          overwritten=$((overwritten + 1))
+          echo -e "${GREEN}✔  Overwritten $docker_file from template (with --force)${RESET}"
+        else
+          echo -e "${BLUE}📝  Note: $docker_file already exists → skipping (use --force to overwrite)${RESET}"
+        fi
+      else
+        cp "$src_docker" "$dst_docker"
+        copied=$((copied + 1))
+        echo -e "${GREEN}✔  Created $docker_file from template${RESET}"
+      fi
+    else
+      echo -e "${YELLOW}⚠️  Warning: Template Dockerfile $src_docker not found — skipped${RESET}"
+    fi
+  done
+else
+  echo -e "${BLUE}📝  --lib flag set → skipping Dockerfile.* sync${RESET}"
+fi
+
+# 4. Handle README.md
 readme_link="For development rules, see [DEVELOPMENT.md](DEVELOPMENT.md)"
 if [[ ! -f "README.md" ]]; then
   echo "$readme_link" >README.md
