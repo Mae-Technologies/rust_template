@@ -15,6 +15,7 @@ RESET="\033[0m"
 
 FORCE=false
 TEST=false
+LIB=false
 NAME="" # Optional default name for MIT license
 LICENSE_NAME=""
 PRIVATE_NAME=""
@@ -60,12 +61,17 @@ while [[ $# -gt 0 ]]; do
       shift
     fi
     ;;
+  --lib)
+    LIB=true
+    shift
+    ;;
   --help | -h)
-    echo -e "${BLUE}⏱  Usage: $(basename "$0") [--force] [--private NAME] [--name NAME]${RESET}"
+    echo -e "${BLUE}⏱  Usage: $(basename "$0") [--force] [--private NAME] [--name NAME] [--lib]${RESET}"
     echo
     echo "  --force       Overwrite existing config files and docs"
     echo "  --private     Provide a name to generate a proprietary LICENSE file"
     echo "  --name        Optional name for MIT license if --private not used"
+    echo "  --lib         Treat target as a library crate (skip Dockerfile.* sync)"
     echo
     exit 0
     ;;
@@ -182,9 +188,13 @@ declare -a CONFIG_FILES=(
   "rust-toolchain.toml"
   "rustfmt.toml"
   ".gitignore"
+  "scripts/dev-boot.sh"
+)
+
+# Service-only files (skipped when --lib is used)
+declare -a SERVICE_ONLY_FILES=(
   "Dockerfile.dev"
   ".dockerignore"
-  "scripts/dev-boot.sh"
 )
 
 # Special workflow files
@@ -223,6 +233,11 @@ if ! $FORCE; then
   for file in "${CONFIG_FILES[@]}"; do
     [[ -e "./$file" ]] && existing_config+=("$file")
   done
+  if ! $LIB; then
+    for file in "${SERVICE_ONLY_FILES[@]}"; do
+      [[ -e "./$file" ]] && existing_config+=("$file")
+    done
+  fi
   if [ ${#existing_config[@]} -gt 0 ]; then
     echo -e "${RED}❌  Error: The following config files already exist:${RESET}" >&2
     printf "  - %s\n" "${existing_config[@]}" >&2
@@ -261,6 +276,29 @@ for file in "${CONFIG_FILES[@]}"; do
     copied=$((copied + 1))
   fi
 done
+
+# 1a. Copy service-only files (skipped when --lib is used)
+if ! $LIB; then
+  for file in "${SERVICE_ONLY_FILES[@]}"; do
+    src="$RUST_TEMPLATE_DIR/$file"
+    dst="./$file"
+    [[ ! -f "$src" ]] && {
+      echo -e "${YELLOW}⚠️  Warning: $src missing — skipped${RESET}"
+      continue
+    }
+    if [[ -e "$dst" ]]; then
+      $FORCE && {
+        cp "$src" "$dst"
+        overwritten=$((overwritten + 1))
+      } || echo -e "${BLUE}📝  Skipped $dst (use --force to overwrite)${RESET}"
+    else
+      cp "$src" "$dst"
+      copied=$((copied + 1))
+    fi
+  done
+else
+  echo -e "${BLUE}📝  --lib flag set → skipping Dockerfile.* sync${RESET}"
+fi
 
 # 1b. Handle workflow files
 # $1 = destination path (e.g. .github/workflows/ci.yml)
