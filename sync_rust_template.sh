@@ -208,6 +208,7 @@ WORKFLOW_CI_FILE_SRC="github/workflows/ci.yml"
 declare -a CONFIGURATION_FILES=(
   "configuration/base.yaml"
   "configuration/test.yaml"
+  "configuration/dev.yaml"
 )
 
 # Pre-push hook
