@@ -5,9 +5,13 @@ application:
   # Services should override this per-environment if they are exposed externally.
   base_url: "http://localhost:8080"
   # HMAC secret for signing cookies/tokens. Must be at least 64 bytes for
-  # actix-session / cookie::Key. Safe to use a fixed value in dev;
-  # staging/production override this via Vault / ExternalSecrets.
-  hmac_secret: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+  # actix-session / cookie::Key.
+  #
+  # NOTE: base.yaml intentionally uses a short, invalid placeholder so that
+  # any environment which forgets to override `hmac_secret` fails fast at
+  # startup. Environment-specific files (dev/staging/production) must
+  # provide a real 64+ byte secret.
+  hmac_secret: "not-a-secret"
 
 database:
   host: "localhost"
