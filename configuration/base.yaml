@@ -1,14 +1,26 @@
 application:
   host: "0.0.0.0"
   port: 8080
+  # Base URL used by mae for link generation and cookie domains.
+  # Services should override this per-environment if they are exposed externally.
+  base_url: "http://localhost:8080"
+  # HMAC secret for signing cookies/tokens. Safe to use a fixed value in dev;
+  # staging/production override this via Vault / ExternalSecrets.
+  hmac_secret: "dev-not-secret"
 
 database:
   host: "localhost"
   port: "5432"
   username: "app"
   password: "secret"
-  db_name: "service_db"
+  # mae::DatabaseSettings expects `database_name`, not `db_name`.
+  database_name: "service_db"
+  # Local/dev connections default to non-SSL; staging/production override to true.
+  require_ssl: false
 
+# NOTE: database_admin is optional in mae and all fields have defaults.
+# These fields document the expected shape, but services can override or omit
+# this block entirely if they don't need mae's database provisioning helpers.
 database_admin:
   superuser: "postgres"
   superuser_password: "postgres"
@@ -30,3 +42,7 @@ messagebroker:
   port: "5672"
   username: "guest"
   password: "guest"
+
+# Entry point for service-specific configuration. Each application defines
+# its own `CustomSettings` struct under this key.
+custom: {}

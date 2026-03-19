@@ -1,6 +1,9 @@
 database:
-  db_name: "service_test_db"
+  # mae::DatabaseSettings expects `database_name`, not `db_name`.
+  database_name: "service_test_db"
 
+# database_admin values are optional and primarily used by mae's test helpers.
+# Services may add additional keys here if they have test-specific needs.
 database_admin:
   db_name: "service_test_db"
   superuser_password: "postgres"
@@ -8,3 +11,6 @@ database_admin:
 messagebroker:
   username: "guest"
   password: "guest"
+
+# Stub for service-specific test configuration.
+custom: {}

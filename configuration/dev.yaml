@@ -8,7 +8,7 @@
 # service's own configuration/dev.yaml after syncing from this template.
 
 application:
-  host: "0.0.0.0"
+  host: "0.0.0.0"  # port / base_url / hmac_secret inherit from base.yaml
 
 # Shared Redis instance
 redis_uri: "redis://redis:6379/1"
@@ -17,3 +17,7 @@ redis_uri: "redis://redis:6379/1"
 messagebroker:
   host: "rabbitmq"
   port: "5672"
+
+# Stub for service-specific settings in dev. Individual services can extend
+# this object (or override it entirely) to add their own configuration keys.
+custom: {}
