@@ -26,8 +26,6 @@ messagebroker:
   host: "rabbitmq"
   port: "5672"
 
-# Stub for service-specific settings in dev. Individual services can extend
-# this object (or override it entirely) to add their own configuration keys.
-custom:
-  micro_service_key: "micro_service_key"
-  micro_service_pass: "micro_service_pass"
+# Stub for service-specific settings in dev. Individual services should
+# override `custom` in their own repos with service-specific values.
+custom: {}
