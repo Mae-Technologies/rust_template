@@ -17,6 +17,9 @@ allow = [
 
 [advisories]
 unmaintained = "workspace"
+ignore = [
+  "RUSTSEC-2026-0049",  # No stable patched rustls-webpki; transitive via mae. Limited impact, tracked upstream.
+]
 
 [bans]
 multiple-versions="allow"
