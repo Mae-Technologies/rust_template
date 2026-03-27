@@ -1,23 +1,19 @@
+For development rules, see [DEVELOPMENT.md](DEVELOPMENT.md)
+
 # Rust Template
 
-A strict, modern Rust project template focused on code quality, safety, security, and reliability.
-
-This template enforces Rust best practices using nightly tooling, aggressive linting, undefined behavior detection, dependency auditing, and comprehensive CI.
+A strict, modern Rust project template for Mae-Technologies services. Focused on code quality, safety, security, and reliability.
 
 ## Key Features
 
 - **Nightly Rust toolchain** with `rustfmt`, `clippy`, and `miri` (`rust-toolchain.toml`)
-- **Strict Clippy rules** — `unwrap_used` and `expect_used` are denied via `[lints.clippy]` in `Cargo.toml`, which applies only to user-written code (not external macro expansions like `serde_json::json!`)
-- **`serde_json::json!` safe to use freely** — `clippy.toml` uses `allow-unwrap-in-tests` instead of `disallowed-methods`, so the json macro works without inline `#[allow]` attrs
+- **Strict Clippy rules** — `unwrap_used` and `expect_used` denied via `[lints.clippy]` in `Cargo.toml` (applies only to user-written code, not external macro expansions like `serde_json::json!`)
 - **Miri** for detecting undefined behavior in tests
 - **cargo-deny** for license compliance, vulnerability scanning, yanked crate blocking, and source restrictions
-- **Opinionated rustfmt** configuration for consistent code style
 - **ARC-based GitHub Actions CI** (`ci.yml`) — runs on PRs to `main`/`production` on self-hosted `mae-runner` nodes; three jobs: config read, integrity (smoke-test), and integration (full service stack)
-- **Compile-time denials** for common anti-patterns (configured in `lib.rs`)
-- **Git pre-push hook** that automatically runs formatting, tests, coverage, Clippy, cargo-deny, and TruffleHog secret scanning before pushing
-- **Git pre-commit hook** that checks for latest rust_template changes
-- **`sync_rust_template.sh`** — syncs template files to a target service, including: config files, workflow (`ci.yml`), `configuration/` YAML files, `.ci/` files, `scripts/`, pre-push hook, DEVELOPMENT.md, and `[lints.clippy]` enforcement in `Cargo.toml`; also **removes deprecated files** from the target on every sync
-- **Comprehensive .gitignore**
+- **Git pre-push hook** — runs format, tests, coverage, Clippy, cargo-deny, and TruffleHog secret scan before every push
+- **Git pre-commit hook** — checks for unsynced rust_template changes
+- **`sync_rust_template.sh`** — syncs template files into a target service repo; bumps `mae` to latest; removes deprecated files
 
 ---
 
@@ -26,13 +22,12 @@ This template enforces Rust best practices using nightly tooling, aggressive lin
 Unwrap/expect enforcement is done via **`Cargo.toml [lints.clippy]`**, not `clippy.toml disallowed-methods`:
 
 ```toml
-# Cargo.toml (each service)
 [lints.clippy]
 unwrap_used = "deny"
 expect_used = "deny"
 ```
 
-**Why not `disallowed-methods`?** The `disallowed-methods` lint fires on _all_ code including external macro expansions — which breaks `serde_json::json!` (it calls `.unwrap()` internally for OOM-only handling). The `clippy::unwrap_used` lint only fires on user-written code, so `json!` works freely.
+`disallowed-methods` fires on external macro expansions (including `serde_json::json!`), so we use `clippy::unwrap_used` instead, which only fires on user-written code.
 
 Test code is exempt via `clippy.toml`:
 ```toml
@@ -44,25 +39,36 @@ allow-expect-in-tests = true
 
 ## CI Pipeline (`ci.yml`)
 
-The CI workflow runs on pull requests targeting `main` or `production` using **self-hosted ARC runners** (`mae-runner`). It has three jobs:
+Runs on PRs targeting `main` or `production` using self-hosted `mae-runner` ARC nodes.
 
 | Job | Purpose |
 |-----|---------|
-| `config` | Reads `configuration/base.yaml` + `configuration/test.yaml` (merged with `yq`) and exports service credentials as job outputs |
-| `integrity` | Installs nightly Rust + `cargo-llvm-cov` + `cargo-deny`, then runs `scripts/smoke-test.sh` (format, clippy, coverage, deny, TruffleHog) |
-| `integration` | Spins up Postgres, Neo4j, RabbitMQ, and Redis service containers, then runs `scripts/int-test.sh` against the full stack |
+| `config` | Reads `configuration/base.yaml` + `configuration/test.yaml` and exports service credentials as job outputs |
+| `integrity` | Runs `scripts/smoke-test.sh` (format, clippy, coverage, deny, TruffleHog) |
+| `integration` | Spins up Postgres, Neo4j, RabbitMQ, Redis; runs `scripts/int-test.sh` |
 
-### Configuration files
+**Key config files:**
+- **`.ci/ci_env.toml`** — test runner engine (`nextest`, `cargo`, `miri`, `nothing`), CLI flags, env vars, coverage threshold
+- **`configuration/base.yaml`** — base service config
+- **`configuration/test.yaml`** — CI overrides applied on top of `base.yaml`
 
-- **`.ci/ci_env.toml`** — configures the test runner engine (`nextest`, `cargo`, `miri`, `nothing`), extra CLI flags, environment variables, and the coverage threshold (default: 45%). Read by both `scripts/smoke-test.sh` and `scripts/int-test.sh`.
-- **`configuration/base.yaml`** — base service configuration (DB, broker, etc.)
-- **`configuration/test.yaml`** — overrides applied on top of `base.yaml` during CI
+---
+
+## Dev Workflow (`Dockerfile.dev`)
+
+Services use a single-stage dev image (no cargo-chef pre-cook). The dev container:
+
+1. Installs `cargo-watch` and `sqlx-cli`
+2. Mounts source via Docker Compose Watch
+3. On start: runs `dev-boot.sh` → `cargo fetch` → `cargo watch` → `dev-run.sh` (migrate + `cargo run`)
+
+`dev-run.sh` handles migration failures gracefully — if migrations fail, the watcher stays alive and retries on the next file change.
 
 ---
 
 ## `sync_rust_template.sh`
 
-Syncs template files into a target Rust service repo. Run it from the **target service's root directory** with `RUST_TEMPLATE_DIR` pointing at your local clone of this repo.
+Syncs template files into a target Rust service repo. Run from the **target service root** with `RUST_TEMPLATE_DIR` pointing at your local clone of this repo.
 
 ### Flags
 
@@ -70,27 +76,30 @@ Syncs template files into a target Rust service repo. Run it from the **target s
 |------|-------------|
 | `--force` / `-f` | Overwrite existing config files, workflow, hooks, DEVELOPMENT.md, and `configuration/` files |
 | `--private NAME` | Generate a proprietary LICENSE file for `NAME`; accepts `RUST_OWNER` env var as fallback |
-| `--name NAME` | Use MIT license for `NAME`; accepts `RUST_OWNER` env var as fallback |
-| `--test` / `-t` | Skip pre-flight checks (remote validation, clean tree, up-to-date SHA) — useful for local testing |
+| `--name NAME` | MIT license for `NAME`; accepts `RUST_OWNER` env var as fallback |
+| `--lib` | Library crate — skip `Dockerfile.*` sync |
+| `--skip-mae-bump` | Skip bumping the `mae` dependency to latest |
+| `--test` / `-t` | Skip pre-flight checks — useful for local testing |
 
 ### What gets synced
 
-1. **Config files** — `clippy.toml`, `deny.toml`, `rust-toolchain.toml`, `rustfmt.toml`, `.gitignore` (skipped if they exist unless `--force`)
-2. **Workflow** — `.github/workflows/ci.yml` (skipped if exists unless `--force`)
-3. **Configuration** — `configuration/base.yaml`, `configuration/test.yaml` (skipped if they exist unless `--force`)
-4. **`.ci/` files** — all files under `.ci/` (e.g., `ci_env.toml`) — skipped if they exist unless `--force`
-5. **`scripts/`** — `scripts/smoke-test.sh`, `scripts/int-test.sh` (skipped if they exist unless `--force`)
-6. **Pre-push hook** — `.git-hooks/` → `.git/hooks/` (skipped if hook exists unless `--force`)
-7. **DEVELOPMENT.md** — copied from template (skipped if exists unless `--force`)
+1. **Config files** — `clippy.toml`, `deny.toml`, `rust-toolchain.toml`, `rustfmt.toml`, `.gitignore`
+2. **Workflow** — `.github/workflows/ci.yml`
+3. **Configuration** — `configuration/base.yaml`, `configuration/test.yaml`, `configuration/dev.yaml`
+4. **`.ci/` files** — all files under `.ci/` (e.g., `ci_env.toml`)
+5. **`scripts/`** — `smoke-test.sh`, `int-test.sh`, `dev-boot.sh`, `dev-run.sh`
+6. **Pre-push hook** — `.git-hooks/` → `.git/hooks/`
+7. **DEVELOPMENT.md** — copied from template
 8. **`[lints.clippy]`** — enforced in target `Cargo.toml` (idempotent)
 9. **LICENSE** — generated from `--private` or `--name`
 10. **`.cargo/config.toml`** — sets `git-fetch-with-cli = true`
-11. **`.rust_template_version`** — synced version stamp
+11. **`.rust_template_version`** — version stamp
 12. **README.md** — prepends a `DEVELOPMENT.md` link if not already present
+13. **`mae` dep bump** — bumps `mae` to latest published version if present in `Cargo.toml`
 
 ### Deprecated file removal
 
-On every sync, the following deprecated files are **deleted** from the target service if present:
+On every sync, the following deprecated files are deleted from the target service if present:
 
 - `.github/workflows/cooked-crab.yaml`
 - `.github/workflows/rust-integrity-guard.yaml`
@@ -99,27 +108,28 @@ On every sync, the following deprecated files are **deleted** from the target se
 
 ---
 
-For development rules, see [DEVELOPMENT.md](DEVELOPMENT.md)
-
----
-
 ## Usage
 
 ### New project setup
-1. Create a new project: `cargo new [project-name]`
-2. Export `RUST_TEMPLATE_DIR` pointing to your local rust_template clone
-3. Run `sync_rust_template.sh --name "Your Name"` (or `--private "Org Name"` for proprietary) from inside the new project directory — copies all config files, workflow, scripts, and enforces `[lints.clippy]` in `Cargo.toml`
-
-### Updating an existing project
-1. `git pull` inside the `rust_template` directory
-2. Run `sync_rust_template.sh --force --private "Your Org Name"` from the project directory
-
-#### Recommendations When Forking
 
 ```bash
-# Point git to the correct hooks directory
+cargo new my-service
+cd my-service
+export RUST_TEMPLATE_DIR=/path/to/rust_template
+bash $RUST_TEMPLATE_DIR/sync_rust_template.sh --private "1000482371 ONTARIO CORPORATION"
 git config core.hooksPath .git-hooks
+```
 
-# Remove the sync script (not needed in forks)
-rm sync_rust_template.sh
+### Updating an existing project
+
+```bash
+cd /path/to/rust_template && git pull
+cd /path/to/my-service
+bash $RUST_TEMPLATE_DIR/sync_rust_template.sh --force --private "1000482371 ONTARIO CORPORATION"
+```
+
+### Library crates (no Docker)
+
+```bash
+bash $RUST_TEMPLATE_DIR/sync_rust_template.sh --lib --private "1000482371 ONTARIO CORPORATION"
 ```

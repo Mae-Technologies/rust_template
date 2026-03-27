@@ -1,6 +1,7 @@
 application:
   host: "0.0.0.0"
   port: 8080
+  cors_allowed_origin: "http://localhost:4200"
   # Base URL used by mae for link generation and cookie domains.
   # Services should override this per-environment if they are exposed externally.
   base_url: "http://localhost:8080"
