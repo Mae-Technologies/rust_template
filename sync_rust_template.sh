@@ -16,6 +16,7 @@ RESET="\033[0m"
 FORCE=false
 TEST=false
 LIB=false
+SKIP_MAE_BUMP=false
 NAME="" # Optional default name for MIT license
 LICENSE_NAME=""
 PRIVATE_NAME=""
@@ -65,13 +66,18 @@ while [[ $# -gt 0 ]]; do
     LIB=true
     shift
     ;;
+  --skip-mae-bump)
+    SKIP_MAE_BUMP=true
+    shift
+    ;;
   --help | -h)
     echo -e "${BLUE}⏱  Usage: $(basename "$0") [--force] [--private NAME] [--name NAME] [--lib]${RESET}"
     echo
     echo "  --force       Overwrite existing config files and docs"
     echo "  --private     Provide a name to generate a proprietary LICENSE file"
     echo "  --name        Optional name for MIT license if --private not used"
-    echo "  --lib         Treat target as a library crate (skip Dockerfile.* sync)"
+    echo "  --lib              Treat target as a library crate (skip Dockerfile.* sync)"
+    echo "  --skip-mae-bump    Skip bumping the mae dependency to latest"
     echo
     exit 0
     ;;
@@ -675,6 +681,30 @@ ensure_clippy_lints() {
 }
 
 ensure_clippy_lints "$(pwd)"
+
+# Bump mae dependency to latest published version (if present in Cargo.toml)
+if [[ "$SKIP_MAE_BUMP" == "false" ]]; then
+  CARGO_FILE="Cargo.toml"
+  if grep -qE '^mae\s*=' "$CARGO_FILE" 2>/dev/null || grep -qE '^\s*mae\s*=' "$CARGO_FILE" 2>/dev/null; then
+    echo -e "\n${BLUE}📦  Checking latest mae version...${RESET}"
+    LATEST_MAE=$(cargo search mae --limit 1 2>/dev/null | grep '^mae ' | sed 's/mae = "\([^"]*\)".*/\1/')
+    if [[ -n "$LATEST_MAE" ]]; then
+      # Update mae version in [dependencies] and [dev-dependencies]
+      sed -i.bak -E "s/(^mae\s*=\s*\{[^}]*version\s*=\s*\")[^\"]+(\")[^}]*\})/\1${LATEST_MAE}\2)/g" "$CARGO_FILE" || true
+      # Also handle simple form: mae = "x.y.z"
+      sed -i.bak -E "s/(^mae\s*=\s*\")[^\"]+(\")/\1${LATEST_MAE}\2/g" "$CARGO_FILE" || true
+      rm -f "${CARGO_FILE}.bak"
+      echo -e "${GREEN}✔  mae bumped to ${LATEST_MAE} in Cargo.toml${RESET}"
+      overwritten=$((overwritten + 1))
+    else
+      echo -e "${YELLOW}⚠️  Could not determine latest mae version — skipping bump${RESET}"
+    fi
+  else
+    echo -e "${BLUE}📝  Note: mae not present in Cargo.toml — skipping mae bump${RESET}"
+  fi
+else
+  echo -e "${BLUE}📝  Note: --skip-mae-bump set — skipping mae dep bump${RESET}"
+fi
 
 # Final summary
 echo

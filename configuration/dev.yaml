@@ -9,6 +9,7 @@
 
 application:
   host: "0.0.0.0"
+  cors_allowed_origin: "http://localhost:4200"
   # Base URL used by mae for link generation and cookie domains.
   # For compose_ru_statbook, override this per service to match the mapped
   # host port. Example: "http://localhost:28101" for ru_accounting_service.

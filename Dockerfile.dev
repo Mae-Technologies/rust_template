@@ -1,25 +1,14 @@
 FROM rustlang/rust:nightly AS chef
-WORKDIR /app
+WORKDIR /app/service
 RUN apt-get update && apt-get install -y --no-install-recommends lld clang curl && rm -rf /var/lib/apt/lists/*
 RUN rustup show active-toolchain | awk '{print $1}' > /rust_toolchain
-RUN TOOLCHAIN=$(cat /rust_toolchain) && \
-    rustup component add --toolchain "$TOOLCHAIN" rustfmt clippy miri
-RUN cargo install --locked cargo-chef
-
-FROM chef AS planner
-COPY . .
-RUN RUSTUP_TOOLCHAIN=$(cat /rust_toolchain) cargo chef prepare --recipe-path recipe.json
 
 FROM chef AS dev
 RUN cargo install --locked cargo-watch
-# Pre-cook dependencies — this layer is cached until Cargo.lock changes
-COPY --from=planner /app/recipe.json recipe.json
-RUN RUSTUP_TOOLCHAIN=$(cat /rust_toolchain) cargo chef cook --recipe-path recipe.json
+# sqlx-cli for dev migrations (same flags as production Dockerfile)
+RUN RUSTUP_TOOLCHAIN=$(cat /rust_toolchain) cargo install sqlx-cli --no-default-features --features native-tls,postgres --locked
 # Source is mounted at runtime via Docker Compose Watch
 COPY . .
-# Regenerate Cargo.lock from the current Cargo.toml.
-# cargo chef cook already downloaded all deps, so this is fast (no network fetch needed).
-# This prevents "failed to write Cargo.lock" errors at runtime when dep versions in
-# Cargo.toml differ from the host Cargo.lock that COPY . . just overwrote the cooked one with.
-RUN RUSTUP_TOOLCHAIN=$(cat /rust_toolchain) cargo fetch
+# Shared migration entrypoint for dev containers; dev-boot.sh sources /scripts/migrate.sh
+COPY scripts/migrate.sh /scripts/migrate.sh
 CMD ["./scripts/dev-boot.sh"]
