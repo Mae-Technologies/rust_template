@@ -1,39 +1,34 @@
 # configuration/dev.yaml
-# Local developer overrides when running services under compose_ru_statbook.
-# These defaults assume the docker-compose.yml in Mae-Technologies/compose_ru_statbook:
-#   - shared Redis service named `redis`
-#   - shared RabbitMQ service named `rabbitmq`
-# Service-specific Postgres/Neo4j hosts (e.g. `postgres-accounting`, `neo4j-accounting`)
-# should be provided via environment variables per service, or overridden in the
-# service's own configuration/dev.yaml after syncing from this template.
+# Local developer overrides for compose_ru_statbook.
+# See: https://github.com/Mae-Technologies/compose_ru_statbook
 
 application:
   host: "0.0.0.0"
+  # TODO: override cors_allowed_origin per service (FE-facing: http://localhost:4200;
+  # micro-services: http://ru-api-service:8080 or equivalent).
   cors_allowed_origin: "http://localhost:4200"
-  # Base URL used by mae for link generation and cookie domains.
-  # For compose_ru_statbook, override this per service to match the mapped
-  # host port. Example: "http://localhost:28101" for ru_accounting_service.
+  # TODO: override base_url to match the mapped host port for this service
+  # in compose_ru_statbook (e.g. "http://localhost:28101" for ru_accounting_service).
   base_url: "http://localhost:8080"
-  # Dev-only HMAC secret for signing cookies/tokens. Must be at least 64 bytes
-  # for actix-session / cookie::Key. This is safe for local dev; staging and
-  # production override via Vault / ExternalSecrets.
   hmac_secret: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 
-# Shared Redis instance
-redis_uri: "redis://redis:6379/1"
+database:
+  # TODO: override host to match your compose_ru_statbook postgres service name
+  # (e.g. "postgres-widget", "postgres-accounting").
+  host: "localhost"
 
-# Shared RabbitMQ instance
-messagebroker:
-  host: "rabbitmq"
-  port: "5672"
-
-# TODO: please update based on your docker-compose file.
 graphdb:
+  # TODO: override host to match your compose_ru_statbook neo4j service name
+  # (e.g. "neo4j-widget", "neo4j-accounting").
   host: "localhost"
   port: "7687"
   username: "neo4j"
   password: "testpassword"
 
-# Stub for service-specific settings in dev. Individual services should
-# override `custom` in their own repos with service-specific values.
+redis_uri: "redis://redis:6379/1"
+
+messagebroker:
+  host: "rabbitmq"
+  port: "5672"
+
 custom: {}
