@@ -188,7 +188,7 @@ if [[ ! -f "Cargo.toml" ]]; then
 fi
 
 # Config files (overwritten only with --force)
-declare -a CONFIG_FILES=(
+#declare -a CONFIG_FILES=(
   "clippy.toml"
   "deny.toml"
   "rust-toolchain.toml"
