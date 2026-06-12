@@ -197,7 +197,7 @@ declare -a CONFIG_FILES=(
   "scripts/dev-boot.sh"
 )
 
- Service-only files (skipped when --lib is used)
+# Service-only files (skipped when --lib is used)
 declare -a SERVICE_ONLY_FILES=(
   "Dockerfile.dev"
   ".dockerignore"
