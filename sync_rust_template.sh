@@ -188,7 +188,7 @@ if [[ ! -f "Cargo.toml" ]]; then
 fi
 
 # Config files (overwritten only with --force)
-#declare -a CONFIG_FILES=(
+declare -a CONFIG_FILES=(
   "clippy.toml"
   "deny.toml"
   "rust-toolchain.toml"
@@ -197,7 +197,7 @@ fi
   "scripts/dev-boot.sh"
 )
 
-# Service-only files (skipped when --lib is used)
+ Service-only files (skipped when --lib is used)
 declare -a SERVICE_ONLY_FILES=(
   "Dockerfile.dev"
   ".dockerignore"
