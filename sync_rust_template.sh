@@ -124,8 +124,8 @@ if ! $TEST; then
   }
 
   # Validate remote
-  TEMPLATE_REMOTE_EXPECTED="https://github.com/MrCartaaa/rust_template.git"
-  TEMPLATE_REMOTE_EXPECTED_SSH="git@github.com:MrCartaaa/rust_template.git"
+  TEMPLATE_REMOTE_EXPECTED="https://github.com/Mae-Technologies/rust_template.git"
+  TEMPLATE_REMOTE_EXPECTED_SSH="git@github.com:Mae-Technologies/rust_template.git"
   CURRENT_REMOTE=$(git remote get-url origin 2>/dev/null || true)
   TEMPLATE_BRANCH="main"
 
