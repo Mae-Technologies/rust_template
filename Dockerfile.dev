@@ -5,8 +5,7 @@ RUN rustup show active-toolchain | awk '{print $1}' > /rust_toolchain
 
 FROM chef AS dev
 RUN cargo install --locked cargo-watch
-# sqlx-cli for dev migrations (same flags as production Dockerfile)
-RUN RUSTUP_TOOLCHAIN=$(cat /rust_toolchain) cargo install sqlx-cli --no-default-features --features native-tls,postgres --locked
+
 # Source is mounted at runtime via Docker Compose Watch
 COPY . .
 # Shared migration entrypoint for dev containers; dev-boot.sh sources /scripts/migrate.sh
