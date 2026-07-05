@@ -135,7 +135,7 @@ if [[ ! -d "$dir/.git" ]]; then
 fi
 
 # Check status (includes staged, unstaged, untracked)
-if ! $REPO_IS_TEMPLATE && [[ -n "$(git -C "$dir" status --porcelain)" ]]; then
+if [[ -n "$(git -C "$dir" status --porcelain)" ]]; then
   err "❌ ERROR: template working tree is not clean: $dir"
   info "   - commit and push your changes in the rust_template project before continuing"
   exit 1
