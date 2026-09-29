@@ -86,7 +86,7 @@ run() {
 ########################################
 # ✨ Always run formatting
 ########################################
-run "rustfmt" cargo fmt -- --check
+run "rustfmt" cargo +nightly fmt -- --check
 
 ########################################
 # 🧪 Tests (optional fast-paths)
@@ -138,7 +138,7 @@ fi
 ########################################
 # 🔍 Lint / Security / Policy
 ########################################
-run "clippy" cargo clippy -- -D warnings
+run "clippy" cargo +nightly clippy -- -D warnings
 run "cargo deny" cargo deny check
 
 ########################################
