@@ -143,16 +143,16 @@ step "Engine: ${BOLD}${ENGINE}${RESET}"
 
 case "$ENGINE" in
   miri)
-    info "▶ Running: cargo miri test ${ARGS[*]}"
-    cargo miri test "${ARGS[@]}"
+    info "▶ Running: cargo +nightly miri test ${ARGS[*]}"
+    cargo +nightly miri test "${ARGS[@]}"
     ;;
   cargo)
-    info "▶ Running: cargo test ${ARGS[*]}"
-    cargo test "${ARGS[@]}"
+    info "▶ Running: cargo +nightly test ${ARGS[*]}"
+    cargo +nightly test "${ARGS[@]}"
     ;;
   nextest)
-    info "▶ Running: cargo nextest run ${ARGS[*]}"
-    cargo nextest run "${ARGS[@]}"
+    info "▶ Running: cargo +nightly nextest run ${ARGS[*]}"
+    cargo +nightly nextest run "${ARGS[@]}"
     ;;
   nothing)
     warn "▶ Skipping tests (engine=nothing)"

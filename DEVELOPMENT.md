@@ -113,11 +113,11 @@ mae = { version = "...", features = ["test-utils"] }
 The pre-push hook runs `scripts/smoke-test.sh` before every push. All checks must pass:
 
 ```bash
-cargo fmt -- --check
+cargo +nightly fmt -- --check
 bash scripts/int-test.sh           # Docker e2e (#[mae_test(docker)]) — local only
 unset MAE_TESTCONTAINERS
 cargo +nightly llvm-cov nextest --no-pager --no-tests=warn --fail-under-lines <threshold>
-cargo clippy -- -D warnings
+cargo +nightly clippy -- -D warnings
 cargo deny check
 trufflehog git file://. --since-commit HEAD~1 --only-verified --fail
 ```
@@ -163,8 +163,8 @@ Every PR must include in its body:
 Closes #<issue>
 
 ## Test Results
-- cargo fmt ✅/❌
-- cargo clippy ✅/❌
+- cargo +nightly fmt ✅/❌
+- cargo +nightly clippy ✅/❌
 - cargo miri test --lib ✅/❌
 - cargo test --features integration-testing ✅/❌
 - cargo deny check ✅/❌
