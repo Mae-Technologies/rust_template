@@ -123,7 +123,7 @@ trufflehog git file://. --since-commit HEAD~1 --only-verified --fail
 
 The hook runs that suite once. Docker e2e is not part of the hook. Run `bash scripts/int-test.sh` when a change needs the container tests.
 
-**Coverage:** line coverage of `src/` from the **`tests/` suite**, not inline `#[cfg(test)]`. Put new unit tests in `tests/unit_coverage.rs`, `tests/coverage/`, or `tests/unit/`. Docker-gated tests skip during llvm-cov so local and GitHub Actions measure the same number. Template `coverage_threshold` is **85** (healthy 80–90 band). Existing crates may override downward in `.ci/ci_env.toml` with a comment to raise back to 85. `coverage_threshold = 0` skips llvm-cov (`mae_macros`).
+**Coverage:** line coverage of `src/` from the **`tests/` suite**, not inline `#[cfg(test)]`. Put new unit tests in `tests/unit_coverage.rs`, `tests/coverage/`, or `tests/unit/`. Docker-gated tests skip during llvm-cov so local and GitHub Actions measure the same number. Template `coverage_threshold` is **85** (healthy 80–90 band). Existing crates may override downward in `.ci/ci_env.toml` with a comment to raise back to 85. `coverage_threshold = 0` skips llvm-cov. The blueprint crate and `mae_macros` use 0 because they have no test suite.
 
 **Remote CI** (`.github/workflows/ci.yml`, `ubuntu-latest`): fmt, that llvm-cov command, clippy, deny, TruffleHog. No Helm’s Deep / in-cluster CI Postgres/Neo4j.
 

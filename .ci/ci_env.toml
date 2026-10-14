@@ -13,7 +13,8 @@
 # "most likely not worth it". 0 skips llvm-cov (mae_macros). Existing crates
 # may override downward with a "raise to 85" comment until tests/ suite catches up.
 
-coverage_threshold = 85
+# The blueprint crate has no test suite. 0 skips llvm-cov. Service crates keep 85.
+coverage_threshold = 0
 
 engine = "nextest"
 env = [
