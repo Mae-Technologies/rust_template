@@ -89,20 +89,11 @@ run() {
 run "rustfmt" cargo +nightly fmt -- --check
 
 ########################################
-# 🧪 Tests (optional fast-paths)
-########################################
-if [[ -z "${SKIP_TESTS:-}" ]]; then
-  run "tests" bash "$(dirname "$0")/int-test.sh"
-  ok "✔  Tests completed successfully"
-else
-  warn "⚡ SKIP_TESTS set — skipping tests"
-fi
-
-########################################
-# 📊 Coverage (cargo llvm-cov) — tests/ suite, no Docker
+# 📊 Coverage (cargo llvm-cov) — the one test pass
 #
 # Same measurement as GHA: docker-gated #[mae_test(docker)] tests skip.
-# Behavioral e2e already ran via int-test.sh above (MAE_TESTCONTAINERS=1).
+# Non-docker tests run here once. Docker e2e is explicit:
+#   bash scripts/int-test.sh
 # Prefer tests/ (unit_coverage.rs, tests/coverage/*, tests/unit/*) over inline
 # #[cfg(test)]. coverage_threshold=0 skips this step (mae_macros).
 ########################################

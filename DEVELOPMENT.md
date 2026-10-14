@@ -114,13 +114,14 @@ The pre-push hook runs `scripts/smoke-test.sh` before every push. All checks mus
 
 ```bash
 cargo +nightly fmt -- --check
-bash scripts/int-test.sh           # Docker e2e (#[mae_test(docker)]) — local only
 unset MAE_TESTCONTAINERS
 cargo +nightly llvm-cov nextest --no-pager --no-tests=warn --fail-under-lines <threshold>
 cargo +nightly clippy -- -D warnings
 cargo deny check
 trufflehog git file://. --since-commit HEAD~1 --only-verified --fail
 ```
+
+The hook runs that suite once. Docker e2e is not part of the hook. Run `bash scripts/int-test.sh` when a change needs the container tests.
 
 **Coverage:** line coverage of `src/` from the **`tests/` suite**, not inline `#[cfg(test)]`. Put new unit tests in `tests/unit_coverage.rs`, `tests/coverage/`, or `tests/unit/`. Docker-gated tests skip during llvm-cov so local and GitHub Actions measure the same number. Template `coverage_threshold` is **85** (healthy 80–90 band). Existing crates may override downward in `.ci/ci_env.toml` with a comment to raise back to 85. `coverage_threshold = 0` skips llvm-cov (`mae_macros`).
 
